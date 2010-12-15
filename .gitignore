@@ -13,3 +13,4 @@ old/
 test.*
 *~
 tools/externals
+*.bak
