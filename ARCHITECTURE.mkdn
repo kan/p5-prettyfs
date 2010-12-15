@@ -32,7 +32,7 @@ proxy access callback-url when can't get reproxy-url
 * たんに、リクエストをうけたら、それをとにかく保存します。
 * たぶん、そのまま KT の REST API におきかえできる。
 * たぶん、dav server にさしかえできる。
-* つまり、この はなんらのインテリジェントなうごきをしてはいけない
+* つまり、このノードはなんらのインテリジェントなうごきをしてはいけない
 
 ### Worker Nodes
 

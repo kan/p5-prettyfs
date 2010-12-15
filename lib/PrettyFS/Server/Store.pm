@@ -4,22 +4,19 @@ use utf8;
 
 package PrettyFS::Server::Store;
 use Plack::Request;
-use Config::Tiny;
 use Log::Minimal;
 use Class::Accessor::Lite (
     ro => [qw/base/],
 );
+use Plack::Middleware::ContentLength;
 
 sub new {
     my $class = shift;
 
     my $config_path = $ENV{PRETTYFS_CONFIG} || die "missing PRETTYFS_CONFIG";
-    my %config = do {
-        my $conf = Config::Tiny->read($config_path) or die "cannot load configuration from: $config_path";
-        %{$conf->{_}};
-    };
-    debugf("configuration: %s", ddf(\%config));
-    my $base = $config{base} || die "missing configuraion key: base";
+    my $config = do $config_path or die "Cannot load configuration file: $config_path: $@";
+    debugf("configuration: %s", ddf($config));
+    my $base = $config->{base} || die "missing configuraion key: base";
     die "'$base' is not a directory" unless -d $base;
 
     bless {base => $base}, $class;
@@ -29,7 +26,7 @@ sub to_app {
     my $class = shift;
     my $self = $class->new();
 
-    sub {
+    Plack::Middleware::ContentLength->wrap(sub {
         my $env = shift;
 
         if ($env->{REQUEST_METHOD} =~ /^(PUT|GET|DELETE)$/) {
@@ -38,7 +35,7 @@ sub to_app {
         } else {
             [405, [], ['Method not allowed']];
         }
-    };
+    });
 }
 
 sub dispatch_put {
@@ -79,7 +76,7 @@ sub dispatch_get {
     my $fname = File::Spec->catfile($self->base, $req->path_info);
     if (-f $fname) {
         open my $fh, '<:raw', $fname or die "cannot open file: $fname";
-        [200, [], $fh];
+        return [200, [], $fh];
     } else {
         return [404, [], ['Not Found']];
     }
