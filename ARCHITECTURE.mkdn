@@ -1,16 +1,3 @@
-### schema
-    create table file (
-      file_uuid varchar(255) binary not null,
-      storage_id int unsigned not null auto_increment,
-      size int unsigned not null,
-      primary key (file_uuid)
-    );
-    create table storage (
-      storage_id int unsigned not null auto_increment,
-      hostname varchar(255) binary not null,
-      primary key (storage_id)
-    );
-
 ### prettyfs.psgi
 PrettyFS::Client is needed
 

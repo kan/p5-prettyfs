@@ -9,6 +9,7 @@ requires 'Plack' =>  0.9949;
 requires 'Config::Simple';
 requires 'Log::Minimal';
 requires 'Class::Accessor::Lite' => 0.05;
+requires 'Sub::Args';
 
 tests 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t';
 test_requires 'Test::More' => 0.96; # done_testing, subtest

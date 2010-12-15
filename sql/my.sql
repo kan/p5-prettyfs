@@ -9,6 +9,8 @@ create table storage (
     storage_id int unsigned not null auto_increment,
     hostname varchar(255) binary not null,
     port     int          unsigned not null,
-    primary key (storage_id)
+    status   TINYTINT     UNSIGNED NOT NULL DEFAULT 1,
+    primary key (storage_id),
+    unique (hostname, port)
 ) ENGINE=InnoDB;
 
