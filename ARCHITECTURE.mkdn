@@ -33,5 +33,31 @@ proxy access callback-url when can't get reproxy-url
 * そもそもPerlbalのreproxy-cacheがキャッシュ切れのときにappに引き直しにいかないのが問題
 * callback-url的なのを一緒に設定してキャッシュきれてるときはそこにcallbackすればいいんじゃないか
 
+### Tracker Node
 
+* tracker node は、リクエストをうけると、いきているストレージサーバーのホスト名をかえす
+* これいらなくね?
+* Client Library でみればじゅうぶんなきがする。
+* まあなんか、RPC Server みたいなのはあっていいとおもうけど。
+
+### Store Node
+
+* たんに、リクエストをうけたら、それをとにかく保存します。
+* たぶん、そのまま KT の REST API におきかえできる。
+* たぶん、dav server にさしかえできる。
+* つまり、この はなんらのインテリジェントなうごきをしてはいけない
+
+### Worker Nodes
+
+#### Replication Worker
+
+queue をみて、なんかレプる
+
+#### Rebalance Worker
+
+これは worker じゃなくてスクリプトでいいかも
+
+#### かんしくん
+
+ノードのいきてるかどうかのかくにんと、容量のかくにんとかして、RDBMS にかく。
 
