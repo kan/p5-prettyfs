@@ -1,7 +1,7 @@
 ### prettyfs.psgi
 PrettyFS::Client is needed
 
-Jonk + Twiggy + Raw DBI + Config::Simple
+Jonk + Twiggy + Raw DBI + Config::Tiny
 
 ### more smart x-reproxy-url
 
@@ -13,7 +13,7 @@ proxy access callback-url when can't get reproxy-url
  * replication
 
 ### ARCHITECTURE
-* Jonk + Twiggy + Raw DBI + Config::Simpleな感じの構成がよいのでは
+* Jonk + Twiggy + Raw DBI + Config::Tinyな感じの構成がよいのでは
 * MogileFSよりもメタデータを多く持ちたい。ただのバイトストリームはあつかいずらいのですよ
 * keyが示すファイルがupdateされるとURLが変わるので困る
 * reproxy-cacheの場合に限る
