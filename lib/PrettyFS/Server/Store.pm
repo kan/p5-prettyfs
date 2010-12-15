@@ -79,7 +79,7 @@ sub dispatch_get {
     my $fname = File::Spec->catfile($self->base, $req->path_info);
     if (-f $fname) {
         open my $fh, '<', $fname or die "cannot open file: $fname";
-        [200, [], [$fh]];
+        [200, [], $fh];
     } else {
         return [404, [], ['Not Found']];
     }
