@@ -24,7 +24,7 @@ sub run {
     my ($self, $file_uuid) = @_;
     my ($host, $port, $status) = $self->dbh->selectrow_array(q{SELECT storage.host, storage.port, storage.status FROM file INNER JOIN storage USING (storage_id) WHERE file.file_uuid=?}, $file_uuid);
     Carp::croak "Cannot retrieve storage information" unless $host && $port;
-    unless ($status == Pikubo->STORAGE_STATUS_ALIVE) {
+    unless ($status == STORAGE_STATUS_ALIVE) {
         critf("Cannot retrieve source. Because the node is currently unavailable.");
         return;
     }

@@ -11,7 +11,6 @@ use Carp ();
 use PrettyFS::Constants;
 use Furl::HTTP;
 use Jonk::Client;
-use PrettyFS::Constants;
 use List::Util qw/shuffle/;
 
 sub new {
