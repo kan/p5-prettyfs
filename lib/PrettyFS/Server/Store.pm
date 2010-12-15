@@ -50,7 +50,7 @@ sub dispatch_put {
     if (-f $fname) {
         [403, [], ["File already exists"]]; # XXX bad status code
     } else {
-        open my $fh, '>', $fname or die "cannot open file: $fname";
+        open my $fh, '>:raw', $fname or die "cannot open file: $fname";
         print $fh $req->content or die "cannot write file: $fname";
         close $fh;
         [200, [], ["OK"]];
@@ -78,7 +78,7 @@ sub dispatch_get {
     # TODO: directory traversal
     my $fname = File::Spec->catfile($self->base, $req->path_info);
     if (-f $fname) {
-        open my $fh, '<', $fname or die "cannot open file: $fname";
+        open my $fh, '<:raw', $fname or die "cannot open file: $fname";
         [200, [], $fh];
     } else {
         return [404, [], ['Not Found']];
