@@ -12,6 +12,7 @@ use PrettyFS::Constants;
 use Furl::HTTP;
 use Jonk::Client;
 use PrettyFS::Constants;
+use List::Util qw/shuffle/;
 
 sub new {
     my $class = shift;
@@ -26,7 +27,7 @@ sub put_file {
     my ($self, $uuid, $fh, $size) = @_;
     $size = -s $fh unless defined $size;
 
-    my @storage_nodes = @{$self->dbh->selectall_arrayref(q{SELECT * FROM storage WHERE status=?}, {Slice => {}}, STORAGE_STATUS_ALIVE)};
+    my @storage_nodes = shuffle @{$self->dbh->selectall_arrayref(q{SELECT * FROM storage WHERE status=?}, {Slice => {}}, STORAGE_STATUS_ALIVE)};
     for my $storage (@storage_nodes) {
         my ($minor_version, $code, $msg, $headers, $body) = $self->ua->request(
             method => 'PUT',
