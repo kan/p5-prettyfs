@@ -55,3 +55,6 @@ queue をみて、なんかレプる
 ### Deleter -- deletes files from storage nodes (protocol deletes from namespace are immediate)
 ### Reaper -- re-enqueues files for replication when disks are marked dead
 
+## status
+mogilefs は readonly, dead, down, alive
+
