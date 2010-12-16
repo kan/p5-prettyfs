@@ -13,8 +13,11 @@ requires 'Class::Accessor::Lite' => 0.05;
 requires 'Sub::Args';
 requires 'Jonk';
 
+
 tests 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t';
 test_requires 'Test::More' => 0.96; # done_testing, subtest
 test_requires 'Test::Requires';
+test_requires 'Test::TCP';
+
 author_tests('xt');
 WriteAll;

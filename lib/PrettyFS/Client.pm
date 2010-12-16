@@ -6,12 +6,12 @@ use Class::Accessor::Lite (
     new => 0,
     ro  => [qw/dbh ua jonk/],
 );
-use Sub::Args;
 use Carp ();
 use PrettyFS::Constants;
 use Furl::HTTP;
 use Jonk::Client;
 use List::Util qw/shuffle/;
+use Params::Validate;
 
 sub new {
     my $class = shift;
@@ -68,28 +68,35 @@ sub get_urls {
 
 sub edit_storage_status {
     my $self = shift;
-    my $args = args(
-        { host => 1, port => 1, status => 1 }
-    );
+    my $args = {validate(
+        @_ => { host => 1, port => 1, status => 1}
+    )};
 
     $self->dbh->do(q{UPDATE storage SET status=? WHERE host=? AND port=?}, {}, $args->{status}, $args->{host}, $args->{port}) == 1 or Carp::croak("cannot update storage information: " . $self->dbh->errstr);
 }
 
 sub add_storage {
     my $self = shift;
-    my $args = args(
-        { host => 1, port => 1, }
-    );
+    my $args = {validate(
+        @_ => { host => 1, port => 1}
+    )};
 
     $self->dbh->do(q{INSERT INTO storage (host, port) VALUES (?, ?)},
                         {}, $args->{host}, $args->{port}) or Carp::croak "Cannot insert storage: $args->{host}, $args->{port}: " . $self->dbh->errstr;
 }
 
+sub list_storage {
+    my $self = shift;
+
+    my $rows = $self->dbh->selectall_arrayref(q{SELECT * FROM storage}, {Slice => {}}) or Carp::croak "Cannot select storage: " . $self->dbh->errstr;
+    return wantarray ? @$rows : $rows;
+}
+
 sub delete_storage {
     my $self = shift;
-    my $args = args(
-        { host => 1, port => 1 }
-    );
+    my $args = {validate(
+        @_ => { host => 1, port => 1}
+    )};
 
     $self->dbh->do(q{DELETE FROM storage WHERE host=? AND port=?},
                         {}, $args->{host}, $args->{port}) or Carp::croak "Cannot delete storage: $args->{host}, $args->{port}: " . $self->dbh->errstr;
