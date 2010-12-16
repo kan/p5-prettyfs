@@ -13,6 +13,7 @@ use Jonk::Client;
 use List::Util qw/shuffle/;
 use Params::Validate;
 use Try::Tiny;
+use Data::UUID;
 
 sub new {
     my $class = shift;
@@ -24,23 +25,31 @@ sub new {
     return $self;
 }
 
+# $client->put_file($bucket, $fh, $size);
 sub put_file {
-    my ($self, $uuid, $fh, $size) = @_;
+    my ($self, $bucket_name, $fh, $size) = @_;
     $size = -s $fh unless defined $size;
+
+    my $bucket = $self->dbh->selectrow_hashref(q{SELECT * FROM bucket WHERE name=?}, {}, $bucket_name);
+    unless ($bucket) {
+        Carp::croak "unknown bucket: $bucket_name";
+    }
+
+    (my $uuid = Data::UUID->new->create_b64()) =~ s/=//g;
 
     my @storage_nodes = shuffle @{$self->dbh->selectall_arrayref(q{SELECT * FROM storage WHERE status=?}, {Slice => {}}, STORAGE_STATUS_ALIVE)};
     for my $storage (@storage_nodes) {
         my ( $minor_version, $code, $msg, $headers, $body ) =
           $self->ua->request(
             method     => 'PUT',
-            path_query => "/$uuid",
+            path_query => "/$bucket->{name}/$uuid",
             host       => $storage->{host},
             port       => $storage->{port},
             content    => $fh,
           );
         if ($code == 200) {
-            $self->put_file_post_process($storage->{storage_id}, $uuid, $size);
-            return 1;
+            $self->put_file_post_process($storage->{id}, $bucket->{id}, $uuid, $size);
+            return $uuid;
         } elsif ($code == 500) {
             $self->edit_storage_status(host => $storage->{host}, port => $storage->{port}, status => STORAGE_STATUS_DEAD);
         }
@@ -49,9 +58,9 @@ sub put_file {
 }
 
 sub put_file_post_process {
-    my ($self, $storage_id, $uuid, $size) = @_;
+    my ($self, $storage_id, $bucket_id, $uuid, $size) = @_;
 
-    $self->dbh->do(q{INSERT INTO file (file_uuid, storage_id, size) VALUES (?, ?, ?)}, {}, $uuid, $storage_id, $size) or Carp::croak("Cannot insert to database: " . $self->dbh->errstr);
+    $self->dbh->do(q{INSERT INTO file (uuid, storage_id, bucket_id, size) VALUES (?, ?, ?, ?)}, {}, $uuid, $storage_id, $bucket_id, $size) or Carp::croak("Cannot insert to database: " . $self->dbh->errstr);
     $self->jonk->enqueue(
         'PrettyFS::Worker::Replication',
         $uuid
@@ -59,13 +68,13 @@ sub put_file_post_process {
 }
 
 sub get_urls {
-    my ($self, $uuid) = @_;
+    my ($self, $bucket_name, $uuid) = @_;
 
-    my $sth = $self->dbh->prepare(q{SELECT storage.* FROM file INNER JOIN storage ON (file.storage_id=storage.storage_id) WHERE file_uuid=?}) or Carp::croak("Cannot prepare statement" . $self->dbh->errstr);
+    my $sth = $self->dbh->prepare(q{SELECT storage.* FROM file INNER JOIN storage ON (file.storage_id=storage.id) WHERE file.uuid=?}) or Carp::croak("Cannot prepare statement" . $self->dbh->errstr);
     $sth->execute($uuid);
     my @ret;
     while (my $row = $sth->fetchrow_hashref) {
-        push @ret, "http://$row->{host}:$row->{port}/$uuid";
+        push @ret, "http://$row->{host}:$row->{port}/$bucket_name/$uuid";
     }
     return wantarray ? @ret : \@ret;
 }
@@ -114,6 +123,12 @@ sub update_storage_status {
             $self->edit_storage_status(host => $args->{host}, port => $args->{port}, status => STORAGE_STATUS_DEAD);
         }
     }
+}
+
+sub add_bucket {
+    my ($self, $name) = @_;
+
+    $self->dbh->do(q{INSERT INTO bucket (name) VALUES (?)},{}, $name) or Carp::croak "Cannot insert bucket: $name: " . $self->dbh->errstr;
 }
 
 sub add_storage {

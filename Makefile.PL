@@ -12,6 +12,7 @@ requires 'Log::Minimal';
 requires 'Class::Accessor::Lite' => 0.05;
 requires 'Sub::Args';
 requires 'Jonk';
+requires 'Data::UUID';
 
 
 tests 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t';

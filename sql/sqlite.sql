@@ -1,17 +1,24 @@
 
+create table bucket (
+    id   integer not null primary key,
+    name varchar(32),
+    unique(name)
+);
+
 create table file (
-    file_uuid varchar(255) not null,
+    uuid       varchar(255) not null,
     storage_id int unsigned not null,
-    size int unsigned not null,
-    primary key (file_uuid)
+    bucket_id  int unsigned not null,
+    size       int unsigned not null,
+    primary key (uuid)
 );
 
 create table storage (
-    storage_id integer not null,
+    id       integer not null,
     host     varchar(255) not null,
     port     int          unsigned not null,
     status   TINYTINT     UNSIGNED NOT NULL DEFAULT 1,
-    primary key (storage_id),
+    primary key (id),
     unique (host, port)
 );
 

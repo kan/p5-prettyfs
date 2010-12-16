@@ -43,7 +43,8 @@ sub dispatch_put {
     my $req = Plack::Request->new($env); # TODO: use $env directly for performance
 
     # TODO: directory traversal
-    my $fname = File::Spec->catfile($self->base, $req->path_info);
+    (my $path = $req->path_info) =~ s/\//_/g;
+    my $fname = File::Spec->catfile($self->base, $path);
     if (-f $fname) {
         [403, [], ["File already exists"]]; # XXX bad status code
     } else {
@@ -59,7 +60,8 @@ sub dispatch_delete {
     my $req = Plack::Request->new($env); # TODO: use $env directly for performance
 
     # TODO: directory traversal
-    my $fname = File::Spec->catfile($self->base, $req->path_info);
+    (my $path = $req->path_info) =~ s/\//_/g;
+    my $fname = File::Spec->catfile($self->base, $path);
     if (-f $fname) {
         unlink $fname or die "cannot unlink file: $fname, $!";
         [200, [], ["OK"]];
@@ -73,7 +75,8 @@ sub dispatch_get {
     my $req = Plack::Request->new($env); # TODO: use $env directly for performance
 
     # TODO: directory traversal
-    my $fname = File::Spec->catfile($self->base, $req->path_info);
+    (my $path = $req->path_info) =~ s/\//_/g;
+    my $fname = File::Spec->catfile($self->base, $path);
     if (-f $fname) {
         open my $fh, '<:raw', $fname or die "cannot open file: $fname";
         return [200, [], $fh];

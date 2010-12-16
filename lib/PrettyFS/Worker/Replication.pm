@@ -22,16 +22,23 @@ sub new {
 
 sub run {
     my ($self, $file_uuid) = @_;
-    my ($host, $port, $status) = $self->dbh->selectrow_array(q{SELECT storage.host, storage.port, storage.status FROM file INNER JOIN storage USING (storage_id) WHERE file.file_uuid=?}, $file_uuid);
+
+    my ($host, $port, $status) = $self->dbh->selectrow_array(q{SELECT storage.host, storage.port, storage.status FROM file INNER JOIN storage USING (id) WHERE file.uuid=?}, $file_uuid);
     Carp::croak "Cannot retrieve storage information" unless $host && $port;
     unless ($status == STORAGE_STATUS_ALIVE) {
         critf("Cannot retrieve source. Because the node is currently unavailable.");
         return;
     }
 
+    my ($bucket_name) = $self->dbh->selectrow_array(q{SELECT bucket.name FROM file INNER JOIN bucket USING (id) WHERE file.uuid=?}, $file_uuid);
+    unless ($bucket_name) {
+        critf("Cannot retrieve bucket. file_uuid: $file_uuid");
+    }
+
     my $temp = File::Temp->new();
     my ($minor_version, $code, $msg, $headers, $body) = $self->furl->request(
         method     => 'GET',
+        path_query => "/$bucket_name/$file_uuid",
         port       => $port,
         host       => $host,
         write_file => $temp,
@@ -42,23 +49,23 @@ sub run {
 
     my @storage_nodes = shuffle @{$self->dbh->selectall_arrayref(q{SELECT host, port FROM storage WHERE status=?}, {Slice => {}}, STORAGE_STATUS_ALIVE)};
     for my $storage (@storage_nodes) {
-        if ($self->copy_file($uuid, $tmp, $storage->{host}, $storage->{port})) {
+        if ($self->copy_file($bucket_name, $file_uuid, $tmp, $storage->{host}, $storage->{port})) {
             infof("Replication successfully. $host:$port => $storage->{host}:$storage->{port}");
             return;
         }
     }
-    die "Cannot replication: $uuid";
+    die "Cannot replication: $file_uuid";
 }
 
 sub copy_file {
-    my ($uuid, $src_fh, $dst_host, $dst_port) {
+    my ($bucket_name, $file_uuid, $src_fh, $host, $port) {
     seek $src_fh, 0, SEEK_SET;
 
     my ($minor_version, $code, $msg, $headers, $body) = $self->furl->request(
         method  => 'PUT',
         host    => $host,
         port    => $port,
-        path    => "/$file_uuid",
+        path    => "/$bucket_name/$file_uuid",
         content => $src_fh,
     );
     return ($code == 200) ? 1 : 0;
