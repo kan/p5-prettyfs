@@ -52,3 +52,6 @@ queue をみて、なんかレプる
 
 レプリケーションきいてるかとか、ノードが本当にデータはいってるかとかみる。
 
+### Deleter -- deletes files from storage nodes (protocol deletes from namespace are immediate)
+### Reaper -- re-enqueues files for replication when disks are marked dead
+
