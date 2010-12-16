@@ -36,6 +36,7 @@ sub put_file {
             path_query => "/$uuid",
             host       => $storage->{host},
             port       => $storage->{port},
+            content    => $fh,
           );
         if ($code == 200) {
             $self->put_file_post_process($storage->{storage_id}, $uuid, $size);

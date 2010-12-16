@@ -8,6 +8,7 @@ use Log::Minimal;
 
 use PrettyFS::Server::Store;
 use PrettyFS::Client;
+use Furl;
 
 test_tcp(
     client => sub {
@@ -21,6 +22,10 @@ test_tcp(
         $client->put_file('hogehoge', $fh, length($src));
         my @urls = $client->get_urls('hogehoge');
         is join(",", @urls), "http://127.0.0.1:$port/hogehoge";
+
+        my $res = Furl->new()->get($urls[0]);
+        is $res->status, 200;
+        is $res->content, 'OKOK';
     },
     server => sub {
         my $port = shift;
