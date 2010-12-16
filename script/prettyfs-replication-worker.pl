@@ -43,7 +43,7 @@ while ( $pm->signal_received ne 'TERM' ) {
     $pm->start and next;
 
     my $dbh = DBI->connect(@$db_conf) or die "Cannot connect to database server: $DBI::errstr";
-    my $worker = Jonk::Worker->new(dbh => $dbh, {functions => ['PrettyFS::Worker::Replication']});
+    my $worker = Jonk::Worker->new($dbh, {functions => ['PrettyFS::Worker::Replication']});
     my $job_count = $max_job_count;
     while ($job_count--) {
         if (my $job = $worker->dequeue) {
