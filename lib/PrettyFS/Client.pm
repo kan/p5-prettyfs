@@ -16,9 +16,10 @@ use Params::Validate;
 sub new {
     my $class = shift;
     my %args = @_==1 ? %{$_[0]} : @_;
+    Carp::croak("missing mandatory parameter: dbh") unless exists $args{dbh};
     my $self = bless {%args}, $class;
     $self->{ua} ||= Furl::HTTP->new();
-    Carp::croak("missing mandatory parameter: jonk") unless exists $self->{jonk};
+    $self->{jonk} ||= Jonk::Client->new($self->dbh);
     return $self;
 }
 
