@@ -1,6 +1,6 @@
 package PrettyFS::Client;
 use strict;
-use warnings;
+use warnings FATAL => 'all';
 use utf8;
 use Class::Accessor::Lite (
     new => 0,
@@ -12,6 +12,7 @@ use Furl::HTTP;
 use Jonk::Client;
 use List::Util qw/shuffle/;
 use Params::Validate;
+use Try::Tiny;
 
 sub new {
     my $class = shift;
@@ -29,12 +30,13 @@ sub put_file {
 
     my @storage_nodes = shuffle @{$self->dbh->selectall_arrayref(q{SELECT * FROM storage WHERE status=?}, {Slice => {}}, STORAGE_STATUS_ALIVE)};
     for my $storage (@storage_nodes) {
-        my ($minor_version, $code, $msg, $headers, $body) = $self->ua->request(
-            method => 'PUT',
-            path   => "/$uuid",
-            host   => $storage->{host},
-            port   => $storage->{port},
-        );
+        my ( $minor_version, $code, $msg, $headers, $body ) =
+          $self->ua->request(
+            method     => 'PUT',
+            path_query => "/$uuid",
+            host       => $storage->{host},
+            port       => $storage->{port},
+          );
         if ($code == 200) {
             $self->put_file_post_process($storage->{storage_id}, $uuid, $size);
             return 1;
@@ -49,7 +51,7 @@ sub put_file_post_process {
     my ($self, $storage_id, $uuid, $size) = @_;
 
     $self->dbh->do(q{INSERT INTO file (file_uuid, storage_id, size) VALUES (?, ?, ?)}, {}, $uuid, $storage_id, $size) or Carp::croak("Cannot insert to database: " . $self->dbh->errstr);
-    $self->jonk->insert(
+    $self->jonk->enqueue(
         'PrettyFS::Worker::Replication',
         $uuid
     );
@@ -62,7 +64,7 @@ sub get_urls {
     $sth->execute($uuid);
     my @ret;
     while (my $row = $sth->fetchrow_hashref) {
-        push @ret, "http://$row->{storage_host}:$row->{storage_port}/$uuid";
+        push @ret, "http://$row->{host}:$row->{port}/$uuid";
     }
     return wantarray ? @ret : \@ret;
 }
@@ -76,14 +78,34 @@ sub edit_storage_status {
     $self->dbh->do(q{UPDATE storage SET status=? WHERE host=? AND port=?}, {}, $args->{status}, $args->{host}, $args->{port}) == 1 or Carp::croak("cannot update storage information: " . $self->dbh->errstr);
 }
 
+sub ping {
+    my $self = shift;
+    my $args = {validate(
+        @_ => { host => 1, port => 1}
+    )};
+
+    try {
+        my ($minor_version, $code, $msg, $headers, $body) = $self->ua->request(
+            method => 'GET',
+            path   => "/?alive",
+            host   => $args->{host},
+            port   => $args->{port},
+        );
+        $code =~ /^(?:200|404)$/ ? 1 : 0
+    } catch {
+        0
+    };
+}
+
 sub add_storage {
     my $self = shift;
     my $args = {validate(
         @_ => { host => 1, port => 1}
     )};
 
-    $self->dbh->do(q{INSERT INTO storage (host, port) VALUES (?, ?)},
-                        {}, $args->{host}, $args->{port}) or Carp::croak "Cannot insert storage: $args->{host}, $args->{port}: " . $self->dbh->errstr;
+    my $status = $self->ping(host => $args->{host}, port => $args->{port}) ? STORAGE_STATUS_ALIVE : STORAGE_STATUS_DEAD;
+    $self->dbh->do(q{INSERT INTO storage (host, port, status) VALUES (?, ?, ?)},
+                        {}, $args->{host}, $args->{port}, $status) or Carp::croak "Cannot insert storage: $args->{host}, $args->{port}: " . $self->dbh->errstr;
 }
 
 sub list_storage {
