@@ -25,8 +25,7 @@ my $db_conf = $config->{DB} or die "missing configuration for DB";
 my $dbh = DBI->connect(@$db_conf) or die "Cannot connect to database: " . $DBI::errstr;
 my $sth = $dbh->prepare(q{SELECT host, port, status FROM storage});
 my $furl = Furl::HTTP->new(timeout => $timeout);
-my $jonk = Jonk::Client->new($dbh); # it should be able to separate dbh?
-my $client = PrettyFS::Client->new(dbh => $dbh, jonk => $jonk);
+my $client = PrettyFS::Client->new(dbh => $dbh);
 
 while (1) {
     $sth->execute();
