@@ -8,7 +8,7 @@ create table bucket (
 create table file (
     uuid       varchar(255) not null,
     storage_id int unsigned not null,
-    bucket_id  int unsigned not null,
+    bucket_id  int unsigned,
     size       int unsigned not null,
     primary key (uuid)
 );

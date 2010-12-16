@@ -5,6 +5,8 @@ use t::Util;
 use Test::TCP;
 use Plack::Loader;
 use Log::Minimal;
+use IO::File;
+
 
 use PrettyFS::Server::Store;
 use PrettyFS::Client;
@@ -19,21 +21,44 @@ test_tcp(
         $client->add_storage(host => '127.0.0.1', port => $port);
         note(ddf $client->list_storage);
 
-        $client->add_bucket('bucketname');
+        subtest 'normal use' => sub {
+    #        $client->add_bucket('bucketname');
 
-        my $src = 'OKOK';
-        open my $fh, '<', \$src;
+            my $fh = IO::File->new_tmpfile;
+            $fh->print('OKOK');
+            $fh->flush;
+            $fh->seek(0, 0);
 
-        my $uuid = $client->put_file('bucketname', $fh, length($src));
+            my $uuid = $client->put_file($fh);
 
-        my @urls = $client->get_urls('bucketname', $uuid);
+            my @urls = $client->get_urls($uuid);
 
-        is join(",", @urls), "http://127.0.0.1:$port/bucketname/$uuid";
+            is join(",", @urls), "http://127.0.0.1:$port/$uuid";
 
-        my $res = Furl->new()->get($urls[0]);
+            my $res = Furl->new()->get($urls[0]);
 
-        is $res->status, 200;
-        is $res->content, 'OKOK';
+            is $res->status, 200;
+            is $res->content, 'OKOK';
+        };
+        subtest 'bucket use' => sub {
+            $client->add_bucket('nekokak');
+
+            my $fh = IO::File->new_tmpfile;
+            $fh->print('MEME');
+            $fh->flush;
+            $fh->seek(0, 0);
+
+            my $uuid = $client->put_file($fh, {bucket => 'nekokak'});
+
+            my @urls = $client->get_urls($uuid, {bucket => 'nekokak'});
+
+            is join(",", @urls), "http://127.0.0.1:$port/nekokak/$uuid";
+
+            my $res = Furl->new()->get($urls[0]);
+
+            is $res->status, 200;
+            is $res->content, 'MEME';
+        };
     },
     server => sub {
         my $port = shift;

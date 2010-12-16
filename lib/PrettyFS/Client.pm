@@ -25,30 +25,38 @@ sub new {
     return $self;
 }
 
-# $client->put_file($bucket, $fh, $size);
+# $client->put_file($fh, [$opt]);
 sub put_file {
-    my ($self, $bucket_name, $fh, $size) = @_;
-    $size = -s $fh unless defined $size;
-
-    my $bucket = $self->dbh->selectrow_hashref(q{SELECT * FROM bucket WHERE name=?}, {}, $bucket_name);
-    unless ($bucket) {
-        Carp::croak "unknown bucket: $bucket_name";
-    }
+    my ($self, $fh, $opt) = @_;
+    my $size = -s $fh;
 
     (my $uuid = Data::UUID->new->create_b64()) =~ s/=//g;
+    my $path;
+    my $bucket_id='';
+    if ($opt->{bucket}) {
+        my $bucket = $self->dbh->selectrow_hashref(q{SELECT * FROM bucket WHERE name=?}, {}, $opt->{bucket});
+        unless ($bucket) {
+            Carp::croak "unknown bucket: $opt->{bucket}";
+        }
+        $bucket_id = $bucket->{id};
+        $path = "/$bucket->{name}/$uuid";
+    } else {
+        $path = "/$uuid";
+    }
+
 
     my @storage_nodes = shuffle @{$self->dbh->selectall_arrayref(q{SELECT * FROM storage WHERE status=?}, {Slice => {}}, STORAGE_STATUS_ALIVE)};
     for my $storage (@storage_nodes) {
         my ( $minor_version, $code, $msg, $headers, $body ) =
           $self->ua->request(
             method     => 'PUT',
-            path_query => "/$bucket->{name}/$uuid",
+            path_query => $path,
             host       => $storage->{host},
             port       => $storage->{port},
             content    => $fh,
           );
         if ($code == 200) {
-            $self->put_file_post_process($storage->{id}, $bucket->{id}, $uuid, $size);
+            $self->put_file_post_process($storage->{id}, $bucket_id, $uuid, $size);
             return $uuid;
         } elsif ($code == 500) {
             $self->edit_storage_status(host => $storage->{host}, port => $storage->{port}, status => STORAGE_STATUS_DEAD);
@@ -67,14 +75,18 @@ sub put_file_post_process {
     );
 }
 
+# $client->get_urls($uuid, [$opt]);
 sub get_urls {
-    my ($self, $bucket_name, $uuid) = @_;
+    my ($self, $uuid, $opt) = @_;
 
     my $sth = $self->dbh->prepare(q{SELECT storage.* FROM file INNER JOIN storage ON (file.storage_id=storage.id) WHERE file.uuid=?}) or Carp::croak("Cannot prepare statement" . $self->dbh->errstr);
     $sth->execute($uuid);
     my @ret;
     while (my $row = $sth->fetchrow_hashref) {
-        push @ret, "http://$row->{host}:$row->{port}/$bucket_name/$uuid";
+        my $path  = "http://$row->{host}:$row->{port}";
+           $path .= $opt->{bucket} ? "/$opt->{bucket}/$uuid" : "/$uuid";
+
+        push @ret, $path;
     }
     return wantarray ? @ret : \@ret;
 }

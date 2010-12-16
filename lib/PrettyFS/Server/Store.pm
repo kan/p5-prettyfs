@@ -45,6 +45,7 @@ sub dispatch_put {
     # TODO: directory traversal
     (my $path = $req->path_info) =~ s/\//_/g;
     my $fname = File::Spec->catfile($self->base, $path);
+    
     if (-f $fname) {
         [403, [], ["File already exists"]]; # XXX bad status code
     } else {
