@@ -22,8 +22,6 @@ test_tcp(
         note(ddf $client->list_storage);
 
         subtest 'normal use' => sub {
-    #        $client->add_bucket('bucketname');
-
             my $fh = IO::File->new_tmpfile;
             $fh->print('OKOK');
             $fh->flush;

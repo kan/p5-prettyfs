@@ -11,7 +11,7 @@ use PrettyFS::Constants;
 use Furl::HTTP;
 use Jonk::Client;
 use List::Util qw/shuffle/;
-use Params::Validate;
+use Sub::Args 0.04;
 use Try::Tiny;
 use Data::UUID;
 
@@ -93,18 +93,14 @@ sub get_urls {
 
 sub edit_storage_status {
     my $self = shift;
-    my $args = {validate(
-        @_ => { host => 1, port => 1, status => 1}
-    )};
+    my $args = args({host => 1, port => 1, status => 1});
 
     $self->dbh->do(q{UPDATE storage SET status=? WHERE host=? AND port=?}, {}, $args->{status}, $args->{host}, $args->{port}) == 1 or Carp::croak("cannot update storage information: " . $self->dbh->errstr);
 }
 
 sub ping {
     my $self = shift;
-    my $args = {validate(
-        @_ => { host => 1, port => 1}
-    )};
+    my $args = args({host => 1, port => 1});
 
     try {
         my ($minor_version, $code, $msg, $headers, $body) = $self->ua->request(
@@ -121,9 +117,7 @@ sub ping {
 
 sub update_storage_status {
     my $self = shift;
-    my $args = {validate(
-        @_ => { host => 1, port => 1, current_status => 1}
-    )};
+    my $args = args({host => 1, port => 1, current_status => 1});
 
     if ($self->ping(host => $args->{host}, port => $args->{port})) {
         # alive
@@ -145,9 +139,7 @@ sub add_bucket {
 
 sub add_storage {
     my $self = shift;
-    my $args = {validate(
-        @_ => { host => 1, port => 1}
-    )};
+    my $args = args({host => 1, port => 1});
 
     my $status = $self->ping(host => $args->{host}, port => $args->{port}) ? STORAGE_STATUS_ALIVE : STORAGE_STATUS_DEAD;
     $self->dbh->do(q{INSERT INTO storage (host, port, status) VALUES (?, ?, ?)},
@@ -163,9 +155,7 @@ sub list_storage {
 
 sub delete_storage {
     my $self = shift;
-    my $args = {validate(
-        @_ => { host => 1, port => 1}
-    )};
+    my $args = args({host => 1, port => 1});
 
     $self->dbh->do(q{DELETE FROM storage WHERE host=? AND port=?},
                         {}, $args->{host}, $args->{port}) or Carp::croak "Cannot delete storage: $args->{host}, $args->{port}: " . $self->dbh->errstr;
