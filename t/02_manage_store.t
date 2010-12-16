@@ -7,8 +7,7 @@ use Jonk::Client;
 use t::Util;
 
 my $dbh = get_dbh();
-my $jonk = Jonk::Client->new($dbh);
-my $pf = PrettyFS::Client->new(dbh => $dbh, jonk => $jonk);
+my $pf = PrettyFS::Client->new(dbh => $dbh);
 $pf->add_storage(host => '127.0.0.1', port => 4649);
 $pf->add_storage(host => '127.0.0.1', port => 5963);
 is(
