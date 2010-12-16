@@ -98,6 +98,24 @@ sub ping {
     };
 }
 
+sub update_storage_status {
+    my $self = shift;
+    my $args = {validate(
+        @_ => { host => 1, port => 1, current_status => 1}
+    )};
+
+    if ($self->ping(host => $args->{host}, port => $args->{port})) {
+        # alive
+        if ($args->{current_status} == STORAGE_STATUS_DEAD) {
+            $self->edit_storage_status(host => $args->{host}, port => $args->{port}, status => STORAGE_STATUS_ALIVE);
+        }
+    } else {
+        if ($args->{current_status} == STORAGE_STATUS_ALIVE) {
+            $self->edit_storage_status(host => $args->{host}, port => $args->{port}, status => STORAGE_STATUS_DEAD);
+        }
+    }
+}
+
 sub add_storage {
     my $self = shift;
     my $args = {validate(
