@@ -10,6 +10,7 @@ create table file (
     storage_id int unsigned not null,
     bucket_id  int unsigned,
     size       int unsigned not null,
+    ext        varchar(10),
     primary key (uuid)
 );
 

@@ -27,7 +27,7 @@ test_tcp(
             $fh->flush;
             $fh->seek(0, 0);
 
-            my $uuid = $client->put_file($fh);
+            my $uuid = $client->put_file({fh => $fh});
 
             my @urls = $client->get_urls($uuid);
 
@@ -46,9 +46,9 @@ test_tcp(
             $fh->flush;
             $fh->seek(0, 0);
 
-            my $uuid = $client->put_file($fh, {bucket => 'nekokak'});
+            my $uuid = $client->put_file({fh => $fh, bucket => 'nekokak'});
 
-            my @urls = $client->get_urls($uuid, {bucket => 'nekokak'});
+            my @urls = $client->get_urls($uuid);
 
             is join(",", @urls), "http://127.0.0.1:$port/nekokak/$uuid";
 
@@ -56,6 +56,23 @@ test_tcp(
 
             is $res->status, 200;
             is $res->content, 'MEME';
+        };
+        subtest 'specific ext' => sub {
+            my $fh = IO::File->new_tmpfile;
+            $fh->print('EXT');
+            $fh->flush;
+            $fh->seek(0, 0);
+
+            my $uuid = $client->put_file({fh => $fh, ext => 'txt'});
+
+            my @urls = $client->get_urls($uuid);
+
+            is join(",", @urls), "http://127.0.0.1:$port/${uuid}.txt";
+
+            my $res = Furl->new()->get($urls[0]);
+
+            is $res->status, 200;
+            is $res->content, 'EXT';
         };
     },
     server => sub {
