@@ -11,6 +11,7 @@ create table file (
     bucket_id  int unsigned,
     size       int unsigned not null,
     ext        varchar(10),
+    del_fg     tinyint unsigned not null default 0,
     primary key (uuid, storage_id)
 );
 

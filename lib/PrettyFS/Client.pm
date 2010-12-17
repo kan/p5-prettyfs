@@ -25,7 +25,6 @@ sub new {
     return $self;
 }
 
-# $client->put_file($fh, [$opt]);
 sub put_file {
     my $self = shift;
     my $args = args({fh => 1, bucket => 0, ext => 0}, @_);
@@ -80,13 +79,25 @@ sub put_file_post_process {
     );
 }
 
-# $client->get_urls($uuid, [$opt]);
+sub delete_file {
+    my ($self, $uuid) = @_;
+
+    # mark delete
+    $self->dbh->do(q{UPDATE file SET del_fg=1 WHERE uuid=?}, {}, $uuid)
+        or Carp::croak("Cannot update to database: " . $self->dbh->errstr);
+
+    $self->jonk->enqueue(
+        'PrettyFS::Worker::Deleter',
+        $uuid
+    );
+}
+
 sub get_urls {
     my ($self, $uuid) = @_;
 
-    my $file = $self->dbh->selectrow_hashref(q{SELECT * FROM file WHERE uuid=?}, {}, $uuid) or Carp::croak "Cannot select file: $uuid" . $self->dbh->errstr;
+    my $file = $self->dbh->selectrow_hashref(q{SELECT * FROM file WHERE uuid=?}, {}, $uuid);# or Carp::croak "Cannot select file: $uuid" . $self->dbh->errstr;
     unless ($file) {
-        Carp::croak "unknown file: $uuid";
+        return;
     }
 
     my $bucket;
