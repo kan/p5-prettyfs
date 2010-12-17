@@ -11,14 +11,14 @@ create table file (
     bucket_id  int unsigned,
     size       int unsigned not null,
     ext        varchar(10),
-    primary key (uuid)
+    primary key (uuid, storage_id)
 );
 
 create table storage (
     id       integer not null,
     host     varchar(255) not null,
     port     int          unsigned not null,
-    status   TINYTINT     UNSIGNED NOT NULL DEFAULT 1,
+    status   tinyint     unsigned not null default 1,
     primary key (id),
     unique (host, port)
 );
