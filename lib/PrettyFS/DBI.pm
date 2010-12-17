@@ -19,5 +19,10 @@ sub single {
     return $self->dbh->selectrow_hashref( $stmt, +{}, @binds );
 }
 
+sub do {
+    my ( $self, $stmt, @binds ) = @_;
+    return $self->dbh->do($stmt, +{}, @binds);
+}
+
 1;
 
