@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use utf8;
 
-package PrettyFS::DBI;
+package PrettyFS::DB;
 use Class::Accessor::Lite (
     new => 1,
     ro  => [qw/dbh/],
