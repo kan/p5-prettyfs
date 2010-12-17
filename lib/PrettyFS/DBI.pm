@@ -10,13 +10,13 @@ use Class::Accessor::Lite (
 
 sub search {
     my ( $self, $stmt, @binds ) = @_;
-    my $x = $self->selectall_arrayref( $stmt, +{ Slice => +{} }, @binds );
+    my $x = $self->dbh->selectall_arrayref( $stmt, +{ Slice => +{} }, @binds );
     return wantarray ? @$x : $x;
 }
 
 sub single {
     my ( $self, $stmt, @binds ) = @_;
-    return $self->selectrow_hashref( $stmt, +{}, @binds );
+    return $self->dbh->selectrow_hashref( $stmt, +{}, @binds );
 }
 
 1;
