@@ -23,8 +23,6 @@ sub run {
     my ($self, $uuid) = @_;
 
     my $files = $self->dbh->selectall_arrayref('SELECT * FROM file WHERE uuid=?',{Slice => {}}, $uuid);
-    use Data::Dumper;
-    warn Dumper $files;
 
     my $bucket_name;
     if ($files->[0]->{bucket_id}) {

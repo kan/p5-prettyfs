@@ -126,6 +126,13 @@ sub edit_storage_status {
     my $args = args({host => 1, port => 1, status => 1}, @_);
 
     $self->dbh->do(q{UPDATE storage SET status=? WHERE host=? AND port=?}, {}, $args->{status}, $args->{host}, $args->{port}) == 1 or Carp::croak("cannot update storage information: " . $self->dbh->errstr);
+
+    if ($args->{status} == STORAGE_STATUS_DEAD) {
+        $self->jonk->enqueue(
+            'PrettyFS::Worker::Repair',
+            "$args->{host}:$args->{port}"
+        );
+    }
 }
 
 sub ping {
