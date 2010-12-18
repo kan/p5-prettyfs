@@ -78,7 +78,7 @@ test_tcp(
     server => sub {
         my $port = shift;
         $ENV{PRETTYFS_CONFIG} = 't/config.pl';
-        my $app = PrettyFS::Server::Store->to_app();
+        my $app = PrettyFS::Server::Store->new->to_app();
         Plack::Loader->auto(port => $port)->run($app);
     },
 );

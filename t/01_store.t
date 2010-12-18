@@ -5,7 +5,7 @@ use PrettyFS::Server::Store;
 use Plack::Test;
 
 $ENV{PRETTYFS_CONFIG} = 't/config.pl';
-my $app = PrettyFS::Server::Store->to_app();
+my $app = PrettyFS::Server::Store->new->to_app();
 
 test_psgi
     app => $app,
