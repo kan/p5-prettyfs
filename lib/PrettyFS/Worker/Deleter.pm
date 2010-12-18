@@ -55,9 +55,11 @@ sub run {
             # update storage status?
         }
 
-        $self->dbh->do(q{DELETE FROM file WHERE uuid=? AND storage_id=?}, {}, $uuid, $file->{storage_id})
-                    or Carp::croak("Cannot insert to database: " . $self->dbh->errstr);
-        infof("Deleter successfully. $host:$port uuid:$uuid");
+        if ($code == 200) {
+            $self->dbh->do(q{DELETE FROM file WHERE uuid=? AND storage_id=?}, {}, $uuid, $file->{storage_id})
+                        or Carp::croak("Cannot insert to database: " . $self->dbh->errstr);
+            infof("Deleter successfully. $host:$port uuid:$uuid");
+        }
     }
 }
 
