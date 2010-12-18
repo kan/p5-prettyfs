@@ -14,11 +14,10 @@ requires 'Sub::Args';
 requires 'Jonk';
 requires 'Data::UUID';
 
-
 tests 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t';
 test_requires 'Test::More' => 0.96; # done_testing, subtest
 test_requires 'Test::Requires';
-test_requires 'Test::TCP';
+test_requires 'Test::TCP' => 1.08;
 
 author_tests('xt');
 WriteAll;
