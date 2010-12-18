@@ -51,7 +51,7 @@ sub put_file {
     }
     $path .= ".$args->{ext}" if $args->{ext};
 
-    my @storage_nodes = shuffle @{$self->db->search(q{SELECT * FROM storage WHERE status=? OR status=?}, STORAGE_STATUS_ALIVE)};
+    my @storage_nodes = shuffle @{$self->db->search(q{SELECT * FROM storage WHERE status=?}, STORAGE_STATUS_ALIVE)};
     for my $storage (@storage_nodes) {
         my ( $minor_version, $code, $msg, $headers, $body ) =
           $self->ua->request(
