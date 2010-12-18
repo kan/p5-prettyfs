@@ -58,5 +58,7 @@ queue をみて、なんかレプる
 ## status
 mogilefs は readonly, dead, down, alive
 
+readonly は readonly flag をつけたほうがいい
+
 ## 参考文献
 http://limilic.com/entry/ln0hwua9xxbn43ku

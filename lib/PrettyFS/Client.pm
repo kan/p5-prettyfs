@@ -51,7 +51,7 @@ sub put_file {
     }
     $path .= ".$args->{ext}" if $args->{ext};
 
-    my @storage_nodes = shuffle @{$self->db->search(q{SELECT * FROM storage WHERE status=?}, STORAGE_STATUS_ALIVE)};
+    my @storage_nodes = shuffle @{$self->db->search(q{SELECT * FROM storage WHERE status=? OR status=?}, STORAGE_STATUS_ALIVE)};
     for my $storage (@storage_nodes) {
         my ( $minor_version, $code, $msg, $headers, $body ) =
           $self->ua->request(
@@ -66,7 +66,7 @@ sub put_file {
             $self->put_file_post_process($storage->{id}, $bucket_id, $uuid, $size, $args->{ext});
             return $uuid;
         } elsif ($code == 500) {
-            $self->edit_storage_status(host => $storage->{host}, port => $storage->{port}, status => STORAGE_STATUS_DEAD);
+            $self->edit_storage_status(host => $storage->{host}, port => $storage->{port}, status => STORAGE_STATUS_DOWN);
         } else {
             ; # nop.
         }
@@ -150,12 +150,12 @@ sub update_storage_status {
 
     if ($self->ping(host => $args->{host}, port => $args->{port})) {
         # alive
-        if ($args->{current_status} == STORAGE_STATUS_DEAD) {
+        if ($args->{current_status} == STORAGE_STATUS_DOWN) {
             $self->edit_storage_status(host => $args->{host}, port => $args->{port}, status => STORAGE_STATUS_ALIVE);
         }
     } else {
         if ($args->{current_status} == STORAGE_STATUS_ALIVE) {
-            $self->edit_storage_status(host => $args->{host}, port => $args->{port}, status => STORAGE_STATUS_DEAD);
+            $self->edit_storage_status(host => $args->{host}, port => $args->{port}, status => STORAGE_STATUS_DOWN);
         }
     }
 }
@@ -170,7 +170,7 @@ sub add_storage {
     my $self = shift;
     my $args = args({host => 1, port => 1}, @_);
 
-    my $status = $self->ping(host => $args->{host}, port => $args->{port}) ? STORAGE_STATUS_ALIVE : STORAGE_STATUS_DEAD;
+    my $status = $self->ping(host => $args->{host}, port => $args->{port}) ? STORAGE_STATUS_ALIVE : STORAGE_STATUS_DOWN;
     $self->db->do(q{INSERT INTO storage (host, port, status) VALUES (?, ?, ?)}, $args->{host}, $args->{port}, $status);
 }
 
