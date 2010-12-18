@@ -78,7 +78,8 @@ sub put_file {
 sub put_file_post_process {
     my ($self, $storage_id, $bucket_id, $uuid, $size, $ext) = @_;
 
-    $self->db->do(q{INSERT INTO file (uuid, storage_id, bucket_id, size, ext) VALUES (?, ?, ?, ?, ?)}, $uuid, $storage_id, $bucket_id, $size, $ext);
+    $self->dbh->do(q{INSERT INTO file (uuid, bucket_id, size, ext) VALUES (?, ?, ?, ?)}, {}, $uuid, $bucket_id, $size, $ext) or Carp::croak("cannot insert: " . $self->dbh->errstr);
+    $self->dbh->do(q{INSERT INTO file_on (file_uuid, storage_id) VALUES (?,?)}, {}, $uuid, $storage_id) or Carp::croak("cannot insert: " . $self->dbh->errstr);
     $self->jonk->enqueue(
         'PrettyFS::Worker::Replication',
         $uuid
@@ -124,7 +125,7 @@ sub get_urls {
     my ($bucket_name, $ext) = $self->dbh->selectrow_array(q{SELECT bucket.name, ext FROM file LEFT JOIN bucket ON (bucket.id=file.bucket_id) WHERE uuid=?}, {}, $uuid) or return;
 
     my @ret;
-    my $sth = $self->dbh->prepare(q{SELECT storage.host, storage.port FROM file INNER JOIN storage ON (file.storage_id=storage.id) WHERE file.uuid=? AND del_fg!=1}) or Cap::croak($self->dbh->errstr);
+    my $sth = $self->dbh->prepare(q{SELECT storage.host, storage.port FROM file INNER JOIN file_on ON (file_on.file_uuid=file.uuid) INNER JOIN storage ON (file_on.storage_id=storage.id) WHERE file.uuid=? AND del_fg!=1}) or Cap::croak($self->dbh->errstr);
     $sth->execute($uuid) or Cap::croak($self->dbh->errstr);
     while (my ($host, $port) = $sth->fetchrow_array()) {
         my $url  = "http://${host}:${port}";

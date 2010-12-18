@@ -25,38 +25,40 @@ sub new {
 sub run {
     my ($self, $uuid) = @_;
 
-    my $files = $self->dbh->selectall_arrayref('SELECT * FROM file WHERE uuid=?',{Slice => {}}, $uuid);
+    my ($ext, $bucket_id) = $self->dbh->selectrow_array('SELECT ext, bucket_id FROM file WHERE uuid=?',{Slice => {}}, $uuid);
 
     my $bucket_name;
-    if ($files->[0]->{bucket_id}) {
-        ($bucket_name) = $self->dbh->selectrow_array(q{SELECT bucket.name FROM bucket WHERE id=?}, {}, $files->[0]->{bucket_id});
+    if (defined $bucket_id) {
+        ($bucket_name) = $self->dbh->selectrow_array(q{SELECT bucket.name FROM bucket WHERE id=?}, {}, $bucket_id);
         unless ($bucket_name) {
             critf("Cannot retrieve bucket. uuid: $uuid");
         }
     }
     my $path  = $bucket_name ? "/$bucket_name/$uuid" : "/$uuid";
-       $path .= ".$files->[0]->{ext}" if $files->[0]->{ext};
+       $path .= ".${ext}" if defined $ext;
 
-    for my $file (@$files) {
-        my ($host, $port, $status) = $self->dbh->selectrow_array(q{SELECT storage.host, storage.port, storage.status FROM storage WHERE id=?}, {}, $file->{storage_id});
+    my @storage_ids = map { $_->[0] } @{$self->dbh->selectall_arrayref(q{SELECT storage_id FROM file_on WHERE file_uuid=?}, {}, $uuid)};
+    for my $storage_id (@storage_ids) {
+        my ($host, $port, $status) = $self->dbh->selectrow_array(q{SELECT storage.host, storage.port, storage.status FROM storage WHERE id=?}, {}, $storage_id);
         Carp::croak "Cannot retrieve storage information" unless $host && $port;
         unless ($status == STORAGE_STATUS_ALIVE) {
             critf("Cannot retrieve source. Because the node is currently unavailable.");
             next;
         }
 
+        infof("remove data from http://$host:$port$path");
         my ($minor_version, $code, $msg, $headers, $body) = $self->furl->request(
             method     => 'DELETE',
-            path_query => $path,
-            port       => $port,
             host       => $host,
+            port       => $port,
+            path_query => $path,
         );
         unless ($code == 200) {
             # update storage status?
         }
 
         if ($code == 200) {
-            $self->dbh->do(q{DELETE FROM file WHERE uuid=? AND storage_id=?}, {}, $uuid, $file->{storage_id})
+            $self->dbh->do(q{DELETE FROM file_on WHERE file_uuid=? AND storage_id=?}, {}, $uuid, $storage_id)
                         or Carp::croak("Cannot insert to database: " . $self->dbh->errstr);
             infof("Deleter successfully. $host:$port uuid:$uuid");
         }

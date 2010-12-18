@@ -19,14 +19,14 @@ for (1..10) {
 }
 run_workers($client->dbh); # run replications
 
-my $s3_cnt = $client->dbh->selectrow_array(q{SELECT COUNT(*) FROM file INNER JOIN storage ON (storage.id=file.storage_id) WHERE storage.port=?}, {}, $storage3->port);
+my $s3_cnt = $client->dbh->selectrow_array(q{SELECT COUNT(*) FROM file INNER JOIN file_on ON (file_on.file_uuid=file.uuid) INNER JOIN storage ON (storage.id=file_on.storage_id) WHERE storage.port=?}, {}, $storage3->port);
 
 $client->edit_storage_status(host => '127.0.0.1', port => $storage1->port, status => STORAGE_STATUS_DEAD);
 $client->add_storage(host => '127.0.0.1', port => $storage3->port);
 
 run_workers($client->dbh); # run replications
 
-my $s3_cnt2 = $client->dbh->selectrow_array(q{SELECT COUNT(*) FROM file INNER JOIN storage ON (storage.id=file.storage_id) WHERE storage.port=?}, {}, $storage3->port);
+my $s3_cnt2 = $client->dbh->selectrow_array(q{SELECT COUNT(*) FROM file INNER JOIN file_on ON (file_on.file_uuid=file.uuid) INNER JOIN storage ON (storage.id=file_on.storage_id) WHERE storage.port=?}, {}, $storage3->port);
 
 cmp_ok $s3_cnt, '<', $s3_cnt2;
 

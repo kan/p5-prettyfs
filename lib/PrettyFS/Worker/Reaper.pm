@@ -34,7 +34,7 @@ sub run {
         Carp::croak "unknown dead storage: $host $port";
     }
 
-    my $sth = $self->dbh->prepare(q{SELECT uuid FROM file WHERE storage_id=?});
+    my $sth = $self->dbh->prepare(q{SELECT file_uuid FROM file_on WHERE storage_id=?});
     $sth->execute($storage_id);
     while (my ($uuid) = $sth->fetchrow_array) {
         $self->jonk->enqueue(
@@ -42,7 +42,7 @@ sub run {
             $uuid
         ) or Carp::croak $self->jon->errstr;
 
-        $self->dbh->do(q{DELETE FROM file WHERE uuid=? AND storage_id=?}, {}, $storage_id, $uuid);
+        $self->dbh->do(q{DELETE FROM file_on WHERE file_uuid=? AND storage_id=?}, {}, $storage_id, $uuid);
     }
 }
 
