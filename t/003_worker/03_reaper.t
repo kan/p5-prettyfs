@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Test::More;
-use PrettyFS::Worker::Repair;
+use PrettyFS::Worker::Reaper;
 use PrettyFS::Worker::Replication;
 use t::Util;
 use PrettyFS::Constants;
@@ -35,7 +35,7 @@ done_testing;
 use Jonk::Worker;
 sub run_workers {
     my $dbh = shift;
-    my @workers = qw/PrettyFS::Worker::Repair PrettyFS::Worker::Replication/;
+    my @workers = qw/PrettyFS::Worker::Reaper PrettyFS::Worker::Replication/;
 
     my $fetcher = Jonk::Worker->new($client->dbh, {functions => \@workers});
     my %workers = map { $_ => $_->new(dbh => $dbh) } @workers;
@@ -43,7 +43,7 @@ sub run_workers {
         debugf("run $job");
         my $worker = $workers{$job->{func}};
         $worker->run($job->{arg});
-        # PrettyFS::Worker::Repair->new(dbh => $client->dbh)->run('127.0.0.1:' . $storage1->port);
+        # PrettyFS::Worker::Reaper->new(dbh => $client->dbh)->run('127.0.0.1:' . $storage1->port);
     }
 }
 

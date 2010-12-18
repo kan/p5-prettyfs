@@ -144,7 +144,7 @@ sub edit_storage_status {
     $self->db->do(q{UPDATE storage SET status=? WHERE host=? AND port=?}, $args->{status}, $args->{host}, $args->{port});
     if ($args->{status} == STORAGE_STATUS_DEAD) {
         $self->jonk->enqueue(
-            'PrettyFS::Worker::Repair',
+            'PrettyFS::Worker::Reaper',
             "$args->{host}:$args->{port}"
         ) or Carp::croak($self->jonk->errstr);
     }
