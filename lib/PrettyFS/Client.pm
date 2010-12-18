@@ -4,7 +4,7 @@ use warnings FATAL => 'all';
 use utf8;
 use Class::Accessor::Lite (
     new => 0,
-    ro  => [qw/dbh db ua jonk/],
+    ro  => [qw/dbh db ua jonk uuid_generator/],
 );
 use Carp ();
 use PrettyFS::Constants;
@@ -26,6 +26,7 @@ sub new {
     $self->{ua}   ||= Furl::HTTP->new();
     $self->{jonk} ||= Jonk::Client->new($self->dbh);
     $self->{db}     = PrettyFS::DB->new({dbh => $self->dbh});
+    $self->{uuid_generator} ||= Data::UUID->new();
     return $self;
 }
 
@@ -34,17 +35,17 @@ sub put_file {
     my $args = args({fh => 1, bucket => 0, ext => 0, size => 0}, @_);
     my $size = defined($args->{size}) ? $args->{size} : -s $args->{fh};
 
-    (my $uuid = Data::UUID->new->create_b64()) =~ s/=//g;
+    # WTF
+    (my $uuid = $self->uuid_generator->create_b64()) =~ s/=//g;
 
     my $path;
     my $bucket_id='';
     if ($args->{bucket}) {
-        my $bucket = $self->db->single(q{SELECT * FROM bucket WHERE name=?}, $args->{bucket});
-        unless ($bucket) {
+        ($bucket_id) = $self->dbh->selectrow_array(q{SELECT id FROM bucket WHERE name=?}, {}, $args->{bucket});
+        unless (defined $bucket_id) {
             Carp::croak "unknown bucket: $args->{bucket}";
         }
-        $bucket_id = $bucket->{id};
-        $path = "/$bucket->{name}/$uuid";
+        $path = "/$args->{bucket}/$uuid";
     } else {
         $path = "/$uuid";
     }
@@ -60,11 +61,14 @@ sub put_file {
             port       => $storage->{port},
             content    => $args->{fh},
           );
+
         if ($code == 200) {
             $self->put_file_post_process($storage->{id}, $bucket_id, $uuid, $size, $args->{ext});
             return $uuid;
         } elsif ($code == 500) {
             $self->edit_storage_status(host => $storage->{host}, port => $storage->{port}, status => STORAGE_STATUS_DEAD);
+        } else {
+            ; # nop.
         }
     }
     Carp::croak "No storage server is available";
@@ -94,25 +98,19 @@ sub get_urls {
     my ($self, $uuid) = @_;
     Carp::croak("Missing mandatory parameter: uuid") unless @_ ==2;
 
-    my $file = $self->db->single(q{SELECT * FROM file WHERE uuid=?}, $uuid) or return;
-
-    my $bucket;
-    if ($file->{bucket_id}) {
-        $bucket = $self->db->single(q{SELECT * FROM bucket WHERE id=?}, $file->{bucket_id});
-        unless ($bucket) {
-            Carp::croak "unknown bucket: $bucket";
-        }
-    }
+    my ($bucket_name, $ext) = $self->dbh->selectrow_array(q{SELECT bucket.name, ext FROM file LEFT JOIN bucket ON (bucket.id=file.bucket_id) WHERE uuid=?}, {}, $uuid) or return;
 
     # FIXME: look del_fg
     my @ret;
-    my @files = $self->db->search(q{SELECT storage.* FROM file INNER JOIN storage ON (file.storage_id=storage.id) WHERE file.uuid=?}, $uuid);
-    for my $row (@files) {
-        my $path  = "http://$row->{host}:$row->{port}";
-           $path .= $bucket ? "/$bucket->{name}/$uuid" : "/$uuid";
-           $path .= ".$file->{ext}" if $file->{ext};
+    my $sth = $self->dbh->prepare(q{SELECT storage.host, storage.port FROM file INNER JOIN storage ON (file.storage_id=storage.id) WHERE file.uuid=?}) or Cap::croak($self->dbh->errstr);
+    $sth->execute($uuid) or Cap::croak($self->dbh->errstr);
+    while (my ($host, $port) = $sth->fetchrow_array()) {
+        my $url  = "http://${host}:${port}";
+           $url .= "/$bucket_name" if defined $bucket_name;
+           $url .= "/$uuid";
+           $url .= ".$ext"         if defined $ext;
 
-        push @ret, $path;
+        push @ret, $url;
     }
     return wantarray ? @ret : \@ret;
 }

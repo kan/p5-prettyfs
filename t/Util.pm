@@ -7,8 +7,10 @@ use DBI;
 use PrettyFS::Client;
 use Test::TCP 1.08;
 use File::Temp qw/tempdir tmpnam/;
+use Plack::Loader;
+use Fcntl ':seek';
 
-our @EXPORT = qw/get_dbh get_client create_storage/;
+our @EXPORT = qw/get_dbh get_client create_storage make_tmpfile/;
 
 sub get_dbh {
     my $dsn = shift || 'dbi:SQLite:';
@@ -31,6 +33,14 @@ sub create_storage {
             Plack::Loader->load('Twiggy', port => $port)->run($app);
         },
     );
+}
+
+sub make_tmpfile {
+    my $content = shift;
+    my $tmp = File::Temp->new();
+    print {$tmp} $content;
+    seek $tmp, 0, SEEK_SET;
+    return $tmp;
 }
 
 1;
