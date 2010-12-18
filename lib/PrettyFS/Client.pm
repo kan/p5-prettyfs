@@ -100,9 +100,8 @@ sub get_urls {
 
     my ($bucket_name, $ext) = $self->dbh->selectrow_array(q{SELECT bucket.name, ext FROM file LEFT JOIN bucket ON (bucket.id=file.bucket_id) WHERE uuid=?}, {}, $uuid) or return;
 
-    # FIXME: look del_fg
     my @ret;
-    my $sth = $self->dbh->prepare(q{SELECT storage.host, storage.port FROM file INNER JOIN storage ON (file.storage_id=storage.id) WHERE file.uuid=?}) or Cap::croak($self->dbh->errstr);
+    my $sth = $self->dbh->prepare(q{SELECT storage.host, storage.port FROM file INNER JOIN storage ON (file.storage_id=storage.id) WHERE file.uuid=? AND del_fg!=1}) or Cap::croak($self->dbh->errstr);
     $sth->execute($uuid) or Cap::croak($self->dbh->errstr);
     while (my ($host, $port) = $sth->fetchrow_array()) {
         my $url  = "http://${host}:${port}";

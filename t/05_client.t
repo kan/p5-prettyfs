@@ -23,6 +23,11 @@ subtest 'get_urls' => sub {
         my $uuid = $client->put_file(fh => make_tmpfile("OK"), bucket => 'hoge');
         is join(',', $client->get_urls($uuid)), sprintf("http://127.0.0.1:%s/hoge/%s", $store1->port, $uuid);
     };
+    subtest "don't fetch removed files" => sub {
+        my $uuid = $client->put_file(fh => make_tmpfile("OK"));
+        $client->delete_file($uuid);
+        is join(',', $client->get_urls($uuid)), '';
+    };
 };
 
 done_testing;
