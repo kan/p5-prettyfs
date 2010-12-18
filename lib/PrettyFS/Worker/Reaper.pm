@@ -1,6 +1,6 @@
 package PrettyFS::Worker::Repair;
 use strict;
-use warnings;
+use warnings FATAL => 'all';
 use utf8;
 use Class::Accessor::Lite (
     new => 0,
@@ -12,6 +12,9 @@ use PrettyFS::Constants;
 sub new {
     my $class = shift;
     my %args = @_==1 ? %{$_[0]} : @_;
+    for (qw/dbh/) {
+        Carp::croak("missing mandatory parameter: $_") unless exists $args{$_};
+    }
     $args{jonk} ||= Jonk::Client->new($args{dbh});
     bless {
         %args
@@ -20,6 +23,9 @@ sub new {
 
 sub run {
     my ($self, $host_port) = @_;
+    Carp::croak("missing host_port") unless defined $host_port;
+
+    infof("running reaper for $host_port");
 
     my ($host, $port) = split ':', $host_port;
 
@@ -28,12 +34,15 @@ sub run {
         Carp::croak "unknown dead storage: $host $port";
     }
 
-    my @files = $self->dbh->selectall_arrayref(q{SELECT uuid FROM file WHERE storage_id=?}, {Slice => {}}, $storage_id);
-    for my $file (@files) {
+    my $sth = $self->dbh->prepare(q{SELECT uuid FROM file WHERE storage_id=?});
+    $sth->execute($storage_id);
+    while (my ($uuid) = $sth->fetchrow_array) {
         $self->jonk->enqueue(
             'PrettyFS::Worker::Replication',
-            $file->{uuid}
-        );
+            $uuid
+        ) or Carp::croak $self->jon->errstr;
+
+        $self->dbh->do(q{DELETE FROM file WHERE uuid=? AND storage_id=?}, {}, $storage_id, $uuid);
     }
 }
 

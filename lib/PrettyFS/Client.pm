@@ -146,7 +146,7 @@ sub edit_storage_status {
         $self->jonk->enqueue(
             'PrettyFS::Worker::Repair',
             "$args->{host}:$args->{port}"
-        );
+        ) or Carp::croak($self->jonk->errstr);
     }
 }
 

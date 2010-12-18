@@ -9,8 +9,10 @@ use Test::TCP 1.08;
 use File::Temp qw/tempdir tmpnam/;
 use Plack::Loader;
 use Fcntl ':seek';
+use PrettyFS::Server::Store;
+use Log::Minimal;
 
-our @EXPORT = qw/get_dbh get_client create_storage make_tmpfile/;
+our @EXPORT = qw/get_dbh get_client create_storage make_tmpfile ddf/;
 
 sub get_dbh {
     my $dsn = shift || 'dbi:SQLite:';
