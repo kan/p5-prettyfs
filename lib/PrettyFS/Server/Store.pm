@@ -14,14 +14,9 @@ sub new {
     my $class = shift;
     my %args  = @_==1 ? %{$_[0]} : @_;
 
-    $args{base} ||= do {
-        my $config_path = $ENV{PRETTYFS_CONFIG} || die "missing PRETTYFS_CONFIG";
-        my $config = do $config_path or die "Cannot load configuration file: $config_path: $@";
-        debugf("configuration: %s", ddf($config));
-        my $base = $config->{base} || die "missing configuraion key: base";
-        die "'$base' is not a directory" unless -d $base;
-        $base;
-    };
+    for (qw/base/) {
+        Carp::croak("missing mandatory parameter: $_") unless exists $args{$_};
+    }
 
     bless {%args}, $class;
 }
