@@ -32,9 +32,11 @@ sub to_app {
     Plack::Middleware::ContentLength->wrap(sub {
         my $env = shift;
 
-        if ($env->{REQUEST_METHOD} =~ /^(PUT|GET|DELETE)$/) {
+        if ($env->{REQUEST_METHOD} =~ /^(PUT|GET|DELETE|HEAD)$/) {
             my $method = "dispatch_" . lc($env->{REQUEST_METHOD});
-            return $self->$method($env);
+            (my $path = $env->{PATH_INFO}) =~ s!/!_!g;
+            my $fname = File::Spec->catfile($self->base, $path);
+            return $self->$method($fname, $env);
         } else {
             [405, [], ['Method not allowed']];
         }
@@ -42,16 +44,13 @@ sub to_app {
 }
 
 sub dispatch_put {
-    my ($self, $env) = @_;
-    my $req = Plack::Request->new($env); # TODO: use $env directly for performance
+    my ($self, $fname, $env) = @_;
 
     # TODO: directory traversal
-    (my $path = $req->path_info) =~ s/\//_/g;
-    my $fname = File::Spec->catfile($self->base, $path);
-    
     if (-f $fname) {
         [403, [], ["File already exists"]]; # XXX bad status code
     } else {
+        my $req = Plack::Request->new($env);
         open my $fh, '>:raw', $fname or die "cannot open file: $fname";
         print $fh $req->content or die "cannot write file: $fname";
         close $fh;
@@ -60,12 +59,9 @@ sub dispatch_put {
 }
 
 sub dispatch_delete {
-    my ($self, $env) = @_;
-    my $req = Plack::Request->new($env); # TODO: use $env directly for performance
+    my ($self, $fname) = @_;
 
     # TODO: directory traversal
-    (my $path = $req->path_info) =~ s/\//_/g;
-    my $fname = File::Spec->catfile($self->base, $path);
     if (-f $fname) {
         unlink $fname or die "cannot unlink file: $fname, $!";
         [200, [], ["OK"]];
@@ -75,15 +71,23 @@ sub dispatch_delete {
 }
 
 sub dispatch_get {
-    my ($self, $env) = @_;
-    my $req = Plack::Request->new($env); # TODO: use $env directly for performance
+    my ($self, $fname) = @_;
 
     # TODO: directory traversal
-    (my $path = $req->path_info) =~ s/\//_/g;
-    my $fname = File::Spec->catfile($self->base, $path);
     if (-f $fname) {
         open my $fh, '<:raw', $fname or die "cannot open file: $fname";
         return [200, [], $fh];
+    } else {
+        return [404, [], ['Not Found']];
+    }
+}
+
+sub dispatch_head {
+    my ($self, $fname) = @_;
+
+    # TODO: directory traversal
+    if (-f $fname) {
+        return [200, [], []];
     } else {
         return [404, [], ['Not Found']];
     }

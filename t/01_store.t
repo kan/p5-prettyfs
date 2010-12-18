@@ -37,6 +37,17 @@ test_psgi
             };
         };
 
+        subtest 'head' => sub {
+            subtest 'ok' => sub {
+                my $res = $cb->(HTTP::Request->new(HEAD => 'http://localhost/foo'));
+                is $res->code, 200;
+            };
+            subtest 'not found' => sub {
+                my $res = $cb->(HTTP::Request->new(HEAD => 'http://localhost/unknown'));
+                is $res->code, 404;
+            };
+        };
+
         subtest 'delete' => sub {
             subtest 'ok' => sub {
                 my $res = $cb->(HTTP::Request->new(DELETE => 'http://localhost/foo'));
@@ -57,6 +68,7 @@ test_psgi
                 is $res->code, 405;
             };
         };
+
     };
 
 done_testing;
