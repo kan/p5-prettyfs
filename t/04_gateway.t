@@ -14,21 +14,8 @@ use LWP::UserAgent;
 
 my $tmp = tmpnam();
 
-my $store1 = Test::TCP->new(
-    code => sub {
-        my $port = shift;
-        my $store = PrettyFS::Server::Store->new(base => tempdir());
-        Plack::Loader->load('Twiggy', port => $port)->run($store->to_app());
-    },
-);
-
-my $store2 = Test::TCP->new(
-    code => sub {
-        my $port = shift;
-        my $store = PrettyFS::Server::Store->new(base => tempdir());
-        Plack::Loader->load('Twiggy', port => $port)->run($store->to_app());
-    },
-);
+my $store1 = create_storage();
+my $store2 = create_storage();
 
 my $gateway = Test::TCP->new(
     code => sub {
