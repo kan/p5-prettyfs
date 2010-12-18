@@ -31,8 +31,8 @@ sub new {
 
 sub put_file {
     my $self = shift;
-    my $args = args({fh => 1, bucket => 0, ext => 0}, @_);
-    my $size = -s $args->{fh};
+    my $args = args({fh => 1, bucket => 0, ext => 0, size => 0}, @_);
+    my $size = defined($args->{size}) ? $args->{size} : -s $args->{fh};
 
     (my $uuid = Data::UUID->new->create_b64()) =~ s/=//g;
 
@@ -92,6 +92,7 @@ sub delete_file {
 
 sub get_urls {
     my ($self, $uuid) = @_;
+    Carp::croak("Missing mandatory parameter: uuid") unless @_ ==2;
 
     my $file = $self->db->single(q{SELECT * FROM file WHERE uuid=?}, $uuid) or return;
 
@@ -103,6 +104,7 @@ sub get_urls {
         }
     }
 
+    # FIXME: look del_fg
     my @ret;
     my @files = $self->db->search(q{SELECT storage.* FROM file INNER JOIN storage ON (file.storage_id=storage.id) WHERE file.uuid=?}, $uuid);
     for my $row (@files) {
