@@ -13,74 +13,54 @@ use Furl;
 use PrettyFS::Worker::Replication;
 use PrettyFS::Worker::Deleter;
 
-test_tcp(
-    client => sub {
-        my $port = shift;
-        my $dbh = get_dbh();
+my $storage = create_storage();
 
-        my $client = PrettyFS::Client->new(dbh => $dbh);
-        $client->add_storage(host => '127.0.0.1', port => $port);
-        note(ddf $client->list_storage);
+my $dbh = get_dbh();
 
-        my $uuid;
-        {
-            my $fh = IO::File->new_tmpfile;
-            $fh->print('OKOK');
-            $fh->flush;
-            $fh->seek(0, 0);
+my $client = PrettyFS::Client->new(dbh => $dbh);
+$client->add_storage(host => '127.0.0.1', port => $storage->port);
+note(ddf $client->list_storage);
 
-            $uuid = $client->put_file({fh => $fh});
+my $uuid;
+{
+    my $fh = make_tmpfile("OKOK");
 
-            my @urls = $client->get_urls($uuid);
+    $uuid = $client->put_file(fh => $fh);
 
-            is join(",", @urls), "http://127.0.0.1:$port/$uuid";
+    my @urls = $client->get_urls($uuid);
 
-            my $res = Furl->new()->get($urls[0]);
+    is join(",", @urls), "http://127.0.0.1:@{[ $storage->port ]}/$uuid";
 
-            is $res->status, 200;
-            is $res->content, 'OKOK';
-        }
+    my $res = Furl->new()->get($urls[0]);
 
-        # do replicaton
-        test_tcp(
-            client => sub {
-                my $port_c = shift;
+    is $res->status, 200;
+    is $res->content, 'OKOK';
+}
 
-                $client->add_storage(host => '127.0.0.1', port => $port_c);
-                note(ddf $client->list_storage);
+my $storage2 = create_storage();
+$client->add_storage(host => '127.0.0.1', port => $storage2->port);
+note(ddf $client->list_storage);
 
-                my $rpl = PrettyFS::Worker::Replication->new({dbh => $dbh});
-                $rpl->run($uuid);
+my $rpl = PrettyFS::Worker::Replication->new({dbh => $dbh});
+$rpl->run($uuid);
 
-                my $files = $dbh->selectall_arrayref('SELECT * FROM file WHERE uuid=?',{Slice => {}}, $uuid);
+my @storage_urls = $client->get_urls($uuid);
+is join(",", sort @storage_urls), join(',', sort "http://127.0.0.1:@{[ $storage->port ]}/$uuid", "http://127.0.0.1:@{[ $storage2->port ]}/$uuid");
 
-                my @urls = $client->get_urls($uuid);
-                is join(",", @urls), "http://127.0.0.1:$port/$uuid,http://127.0.0.1:$port_c/$uuid";
-            },
-            server => sub {
-                my $port_c = shift;
-                $ENV{PRETTYFS_CONFIG} = 't/config.pl';
-                my $app = PrettyFS::Server::Store->new->to_app();
-                Plack::Loader->auto(port => $port_c)->run($app);
-            },
-        );
+$client->delete_file($uuid);
 
-        $client->delete_file($uuid);
+note 'delete';
+my $deleter = PrettyFS::Worker::Deleter->new({dbh => $dbh});
+$deleter->run($uuid);
 
-        my $deleter = PrettyFS::Worker::Deleter->new({dbh => $dbh});
-        $deleter->run($uuid);
-
-        my @urls = $client->get_urls($uuid);
-        is scalar(@urls), 0;
-
-    },
-    server => sub {
-        my $port = shift;
-        $ENV{PRETTYFS_CONFIG} = 't/config.pl';
-        my $app = PrettyFS::Server::Store->new->to_app();
-        Plack::Loader->auto(port => $port)->run($app);
-    },
-);
+{
+    my @urls = $client->get_urls($uuid);
+    is scalar(@urls), 0;
+}
+for (@storage_urls) {
+    my $res = Furl->new()->get($_);
+    is $res->code, 404, "really removed: $_";
+}
 
 done_testing;
 

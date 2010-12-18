@@ -12,76 +12,67 @@ use PrettyFS::Server::Store;
 use PrettyFS::Client;
 use Furl;
 
-test_tcp(
-    client => sub {
-        my $port = shift;
-        my $dbh = get_dbh();
+my $storage = create_storage();
 
-        my $client = PrettyFS::Client->new(dbh => $dbh);
-        $client->add_storage(host => '127.0.0.1', port => $port);
-        note(ddf $client->list_storage);
+my $dbh = get_dbh();
 
-        subtest 'normal use' => sub {
-            my $fh = IO::File->new_tmpfile;
-            $fh->print('OKOK');
-            $fh->flush;
-            $fh->seek(0, 0);
+my $client = PrettyFS::Client->new(dbh => $dbh);
+$client->add_storage(host => '127.0.0.1', port => $storage->port);
+note(ddf $client->list_storage);
 
-            my $uuid = $client->put_file({fh => $fh});
+subtest 'normal use' => sub {
+    my $fh = IO::File->new_tmpfile;
+    $fh->print('OKOK');
+    $fh->flush;
+    $fh->seek(0, 0);
 
-            my @urls = $client->get_urls($uuid);
+    my $uuid = $client->put_file({fh => $fh});
 
-            is join(",", @urls), "http://127.0.0.1:$port/$uuid";
+    my @urls = $client->get_urls($uuid);
 
-            my $res = Furl->new()->get($urls[0]);
+    is join(",", @urls), "http://127.0.0.1:@{[ $storage->port ]}/$uuid";
 
-            is $res->status, 200;
-            is $res->content, 'OKOK';
-        };
-        subtest 'bucket use' => sub {
-            $client->add_bucket('nekokak');
+    my $res = Furl->new()->get($urls[0]);
 
-            my $fh = IO::File->new_tmpfile;
-            $fh->print('MEME');
-            $fh->flush;
-            $fh->seek(0, 0);
+    is $res->status, 200;
+    is $res->content, 'OKOK';
+};
+subtest 'bucket use' => sub {
+    $client->add_bucket('nekokak');
 
-            my $uuid = $client->put_file({fh => $fh, bucket => 'nekokak'});
+    my $fh = IO::File->new_tmpfile;
+    $fh->print('MEME');
+    $fh->flush;
+    $fh->seek(0, 0);
 
-            my @urls = $client->get_urls($uuid);
+    my $uuid = $client->put_file({fh => $fh, bucket => 'nekokak'});
 
-            is join(",", @urls), "http://127.0.0.1:$port/nekokak/$uuid";
+    my @urls = $client->get_urls($uuid);
 
-            my $res = Furl->new()->get($urls[0]);
+    is join(",", @urls), "http://127.0.0.1:@{[ $storage->port ]}/nekokak/$uuid";
 
-            is $res->status, 200;
-            is $res->content, 'MEME';
-        };
-        subtest 'specific ext' => sub {
-            my $fh = IO::File->new_tmpfile;
-            $fh->print('EXT');
-            $fh->flush;
-            $fh->seek(0, 0);
+    my $res = Furl->new()->get($urls[0]);
 
-            my $uuid = $client->put_file({fh => $fh, ext => 'txt'});
+    is $res->status, 200;
+    is $res->content, 'MEME';
+};
+subtest 'specific ext' => sub {
+    my $fh = IO::File->new_tmpfile;
+    $fh->print('EXT');
+    $fh->flush;
+    $fh->seek(0, 0);
 
-            my @urls = $client->get_urls($uuid);
+    my $uuid = $client->put_file({fh => $fh, ext => 'txt'});
 
-            is join(",", @urls), "http://127.0.0.1:$port/${uuid}.txt";
+    my @urls = $client->get_urls($uuid);
 
-            my $res = Furl->new()->get($urls[0]);
+    is join(",", @urls), "http://127.0.0.1:@{[ $storage->port ]}/${uuid}.txt";
 
-            is $res->status, 200;
-            is $res->content, 'EXT';
-        };
-    },
-    server => sub {
-        my $port = shift;
-        $ENV{PRETTYFS_CONFIG} = 't/config.pl';
-        my $app = PrettyFS::Server::Store->new->to_app();
-        Plack::Loader->auto(port => $port)->run($app);
-    },
-);
+    my $res = Furl->new()->get($urls[0]);
+
+    is $res->status, 200;
+    is $res->content, 'EXT';
+};
 
 
 done_testing;

@@ -14,6 +14,9 @@ sub new {
     my $class = shift;
     my %args = @_==1 ? %{$_[0]} : @_;
     $args{furl} ||= Furl::HTTP->new();
+    for (qw/dbh/) {
+        Carp::croak("missing mandatory parameter: $_") unless exists $args{$_};
+    }
     bless {
         %args
     }, $class;

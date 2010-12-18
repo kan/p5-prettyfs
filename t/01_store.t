@@ -3,9 +3,9 @@ use warnings;
 use Test::More;
 use PrettyFS::Server::Store;
 use Plack::Test;
+use File::Temp qw/tempdir/;
 
-$ENV{PRETTYFS_CONFIG} = 't/config.pl';
-my $app = PrettyFS::Server::Store->new->to_app();
+my $app = PrettyFS::Server::Store->new(base => tempdir())->to_app();
 
 test_psgi
     app => $app,

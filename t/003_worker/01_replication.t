@@ -12,14 +12,7 @@ use PrettyFS::Client;
 use Furl;
 use PrettyFS::Worker::Replication;
 
-my $store1 = Test::TCP->new(
-    code => sub {
-        my $port = shift;
-        $ENV{PRETTYFS_CONFIG} = 't/config.pl';
-        my $app = PrettyFS::Server::Store->new->to_app();
-        Plack::Loader->auto(port => $port)->run($app);
-    },
-);
+my $store1 = create_storage();
 
 my $client = get_client();
 $client->add_storage(host => '127.0.0.1', port => $store1->port);
@@ -27,10 +20,7 @@ note(ddf $client->list_storage);
 
 my $uuid;
 {
-    my $fh = IO::File->new_tmpfile;
-    $fh->print('OKOK');
-    $fh->flush;
-    $fh->seek(0, 0);
+    my $fh = make_tmpfile("OKOK");
 
     $uuid = $client->put_file({fh => $fh});
 
@@ -45,14 +35,7 @@ my $uuid;
 }
 
 # create more storage server
-my $store2 = Test::TCP->new(
-    code => sub {
-        my $port = shift;
-        $ENV{PRETTYFS_CONFIG} = 't/config.pl';
-        my $app = PrettyFS::Server::Store->new->to_app();
-        Plack::Loader->auto(port => $port)->run($app);
-    },
-);
+my $store2 = create_storage();
 $client->add_storage(host => '127.0.0.1', port => $store2->port);
 note(ddf $client->list_storage);
 
