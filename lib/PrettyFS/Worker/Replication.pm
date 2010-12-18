@@ -80,12 +80,12 @@ sub copy_file {
     $self->dbh->do(q{INSERT INTO file (uuid, storage_id, bucket_id, size, ext) VALUES (?, ?, ?, ?, ?)}, {}, $uuid, $storage_id, $file->{bucket_id}, $size, $file->{ext})
             or Carp::croak("Cannot insert to database: " . $self->dbh->errstr);
 
-    my ($minor_version, $code, $msg, $headers, $body) = $self->furl->request(
-        method  => 'PUT',
-        host    => $host,
-        port    => $port,
-        path    => $path,
-        content => $src_fh,
+    my ( $minor_version, $code, $msg, $headers, $body ) = $self->furl->request(
+        method     => 'PUT',
+        host       => $host,
+        port       => $port,
+        path_query => $path,
+        content    => $src_fh,
     );
     return ($code == 200) ? 1 : 0;
 }
