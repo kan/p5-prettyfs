@@ -15,6 +15,7 @@ use List::Util qw/shuffle/;
 use Sub::Args 0.04;
 use Try::Tiny;
 use Data::UUID;
+use File::Temp ();
 
 sub new {
     my $class = shift;
@@ -84,8 +85,30 @@ sub put_file_post_process {
     );
 }
 
+sub get_file_fh {
+    my ($self, $uuid) = @_;
+    Carp::croak("Missing mandatory parameter: uuid") unless @_ ==2;
+
+    my @urls = $self->get_urls($uuid);
+    for my $url (@urls) {
+        my $temp = File::Temp->new();
+        my $res = try {
+            my ($minor_version, $code, $msg, $headers, $body) = $self->ua->request(
+                method     => 'GET',
+                url        => $url,
+                write_file => $temp,
+            );
+            return 1 if $code == 200;
+            return 0;
+        };
+        return ($temp, $url) if $res;
+    }
+    return undef;
+}
+
 sub delete_file {
     my ($self, $uuid) = @_;
+    Carp::croak("Missing mandatory parameter: uuid") unless @_ ==2;
 
     $self->db->do(q{UPDATE file SET del_fg=1 WHERE uuid=?}, $uuid);
     $self->jonk->enqueue(

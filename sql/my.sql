@@ -1,7 +1,8 @@
 
 create table bucket (
     id   int unsigned not null primary key auto_increment,
-    name varchar(32) unique
+    name varchar(32),
+    unique (name)
 ) ENGINE=InnoDB;
 
 create table file (
