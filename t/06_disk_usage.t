@@ -8,7 +8,7 @@ use JSON;
 
 my $tmp = tempdir(CLEANUP => 1);
 PrettyFS::DiskUsage->new(docroot => File::Spec->rel2abs($tmp))->run_once(); 
-my $ufile = File::Spec->catfile($tmp, 'usage');
+my $ufile = File::Spec->catfile($tmp, '__prettyfs_disk_usage__');
 ok -f $ufile;
 open my $fh, '<', $ufile or die $!;
 my $content = do { local $/; <$fh> };

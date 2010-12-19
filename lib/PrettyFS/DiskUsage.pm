@@ -60,7 +60,7 @@ sub run_once {
         # size of old file we'll be overwriting in place (we'll want
         # to pad with newlines/spaces, before we truncate it, for
         # minimizing races)
-        my $ufile    = "$path/usage";
+        my $ufile    = "$path/__prettyfs_disk_usage__";
         my $old_size = ( -s $ufile ) || 0;
         my $mode     = $old_size ? "+<" : ">";
 
