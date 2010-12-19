@@ -10,7 +10,7 @@ requires 'Config::Tiny';
 requires 'Furl' => 0.18;
 requires 'Log::Minimal';
 requires 'Class::Accessor::Lite' => 0.05;
-requires 'Sub::Args';
+requires 'Smart::Args';
 requires 'Jonk';
 requires 'Data::UUID';
 

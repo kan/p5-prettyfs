@@ -39,10 +39,8 @@ note "client: $$";
 my $dbh = get_dbh("dbi:SQLite:dbname=$tmp");
 my $client = PrettyFS::Client->new(dbh => $dbh);
 note "setup storage";
-my $content = "OK";
-open my $fh, '<', \$content;
 $client->add_storage(host => '127.0.0.1', port => $_->port) for $store1, $store2;
-my $uuid = $client->put_file(fh => $fh, size => 2);
+my $uuid = $client->put_file(fh => make_tmpfile("OK"));
 
 note sprintf("gateway: %d, store1: %d, store2: %d", $gateway->port, $store1->port, $store2->port);
 

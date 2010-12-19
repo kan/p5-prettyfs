@@ -12,7 +12,7 @@ use PrettyFS::DB;
 use Furl::HTTP;
 use Jonk::Client;
 use List::Util qw/shuffle/;
-use Sub::Args 0.04;
+use Smart::Args;
 use Try::Tiny;
 use Data::UUID;
 use File::Temp ();
@@ -32,25 +32,30 @@ sub new {
 }
 
 sub put_file {
-    my $self = shift;
-    my $args = args({fh => 1, bucket => 0, ext => 0, size => 0}, @_);
-    my $size = defined($args->{size}) ? $args->{size} : -s $args->{fh};
+    args my $self,
+         my $fh,
+         my $bucket => {optional => 1},
+         my $ext    => {optional => 1},
+         ;
+
+    my $size = -s $fh;
+    Carp::croak("cannot get file size from fh. It cased by not a real file") unless defined $size;
 
     # WTF
     (my $uuid = $self->uuid_generator->create_b64()) =~ s/=//g;
 
     my $path;
     my $bucket_id='';
-    if ($args->{bucket}) {
-        ($bucket_id) = $self->dbh->selectrow_array(q{SELECT id FROM bucket WHERE name=?}, {}, $args->{bucket});
+    if ($bucket) {
+        ($bucket_id) = $self->dbh->selectrow_array(q{SELECT id FROM bucket WHERE name=?}, {}, $bucket);
         unless (defined $bucket_id) {
-            Carp::croak "unknown bucket: $args->{bucket}";
+            Carp::croak "unknown bucket: $bucket";
         }
-        $path = "/$args->{bucket}/$uuid";
+        $path = "/$bucket/$uuid";
     } else {
         $path = "/$uuid";
     }
-    $path .= ".$args->{ext}" if $args->{ext};
+    $path .= ".$ext" if defined $ext;
 
     my @storage_nodes = shuffle @{$self->db->search(q{SELECT * FROM storage WHERE status=?}, STORAGE_STATUS_ALIVE)};
     for my $storage (@storage_nodes) {
@@ -60,11 +65,11 @@ sub put_file {
             path_query => $path,
             host       => $storage->{host},
             port       => $storage->{port},
-            content    => $args->{fh},
+            content    => $fh,
           );
 
         if ($code == 200) {
-            $self->put_file_post_process($storage->{id}, $bucket_id, $uuid, $size, $args->{ext});
+            $self->put_file_post_process($storage->{id}, $bucket_id, $uuid, $size, $ext);
             return $uuid;
         } elsif ($code == 500) {
             $self->edit_storage_status(host => $storage->{host}, port => $storage->{port}, status => STORAGE_STATUS_DOWN);
@@ -139,28 +144,32 @@ sub get_urls {
 }
 
 sub edit_storage_status {
-    my $self = shift;
-    my $args = args({host => 1, port => 1, status => 1}, @_);
+    args my $self,
+         my $host,
+         my $port,
+         my $status,
+         ;
 
-    $self->db->do(q{UPDATE storage SET status=? WHERE host=? AND port=?}, $args->{status}, $args->{host}, $args->{port});
-    if ($args->{status} == STORAGE_STATUS_DEAD) {
+    $self->db->do(q{UPDATE storage SET status=? WHERE host=? AND port=?}, $status, $host, $port);
+    if ($status == STORAGE_STATUS_DEAD) {
         $self->jonk->enqueue(
             'PrettyFS::Worker::Reaper',
-            "$args->{host}:$args->{port}"
+            "$host:$port"
         ) or Carp::croak($self->jonk->errstr);
     }
 }
 
 sub ping {
-    my $self = shift;
-    my $args = args({host => 1, port => 1}, @_);
+    args my $self,
+         my $host,
+         my $port;
 
     try {
         my ($minor_version, $code, $msg, $headers, $body) = $self->ua->request(
             method => 'GET',
             path   => "/?alive",
-            host   => $args->{host},
-            port   => $args->{port},
+            host   => $host,
+            port   => $port,
         );
         $code =~ /^(?:200|404)$/ ? 1 : 0
     } catch {
@@ -169,17 +178,20 @@ sub ping {
 }
 
 sub update_storage_status {
-    my $self = shift;
-    my $args = args({host => 1, port => 1, current_status => 1}, @_);
+    args my $self,
+         my $host,
+         my $port,
+         my $current_status,
+         ;
 
-    if ($self->ping(host => $args->{host}, port => $args->{port})) {
+    if ($self->ping(host => $host, port => $port)) {
         # alive
-        if ($args->{current_status} == STORAGE_STATUS_DOWN) {
-            $self->edit_storage_status(host => $args->{host}, port => $args->{port}, status => STORAGE_STATUS_ALIVE);
+        if ($current_status == STORAGE_STATUS_DOWN) {
+            $self->edit_storage_status(host => $host, port => $port, status => STORAGE_STATUS_ALIVE);
         }
     } else {
-        if ($args->{current_status} == STORAGE_STATUS_ALIVE) {
-            $self->edit_storage_status(host => $args->{host}, port => $args->{port}, status => STORAGE_STATUS_DOWN);
+        if ($current_status == STORAGE_STATUS_ALIVE) {
+            $self->edit_storage_status(host => $host, port => $port, status => STORAGE_STATUS_DOWN);
         }
     }
 }
@@ -191,11 +203,13 @@ sub add_bucket {
 }
 
 sub add_storage {
-    my $self = shift;
-    my $args = args({host => 1, port => 1}, @_);
+    args my $self,
+         my $host,
+         my $port,
+         ;
 
-    my $status = $self->ping(host => $args->{host}, port => $args->{port}) ? STORAGE_STATUS_ALIVE : STORAGE_STATUS_DOWN;
-    $self->db->do(q{INSERT INTO storage (host, port, status) VALUES (?, ?, ?)}, $args->{host}, $args->{port}, $status);
+    my $status = $self->ping(host => $host, port => $port) ? STORAGE_STATUS_ALIVE : STORAGE_STATUS_DOWN;
+    $self->db->do(q{INSERT INTO storage (host, port, status) VALUES (?, ?, ?)}, $host, $port, $status);
 }
 
 sub list_storage {
@@ -206,10 +220,12 @@ sub list_storage {
 }
 
 sub delete_storage {
-    my $self = shift;
-    my $args = args({host => 1, port => 1}, @_);
+    args my $self,
+         my $host,
+         my $port,
+         ;
 
-    $self->db->do(q{DELETE FROM storage WHERE host=? AND port=?}, $args->{host}, $args->{port});
+    $self->db->do(q{DELETE FROM storage WHERE host=? AND port=?}, $host, $port);
 }
 
 1;
