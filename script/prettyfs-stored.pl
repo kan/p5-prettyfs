@@ -24,6 +24,11 @@ my $disk_usage = Proc::Guard->new(
     }
 );
 
+$SIG{TERM} = $SIG{INT} = sub {
+    undef $disk_usage;
+
+    exit 1;
+};
 infof "access to http://localhost:$port/\n";
 Plack::Loader->load('Twiggy', port => $port)->run($app);
 
