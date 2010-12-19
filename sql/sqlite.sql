@@ -36,5 +36,5 @@ CREATE TABLE job (
     func         text,
     arg          text,
     enqueue_time text
-)
+);
 
