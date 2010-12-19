@@ -39,8 +39,7 @@ my $store2 = create_storage();
 $client->add_storage(host => '127.0.0.1', port => $store2->port);
 note(ddf $client->list_storage);
 
-my $rpl = PrettyFS::Worker::Replication->new(dbh => $client->dbh);
-$rpl->run($uuid);
+run_workers($client->dbh);
 
 my @urls = $client->get_urls($uuid);
 is join(",", sort @urls), join(',', sort "http://127.0.0.1:@{[ $store1->port ]}/$uuid", "http://127.0.0.1:@{[ $store2->port ]}/$uuid");
