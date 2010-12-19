@@ -36,7 +36,7 @@ sub run_once {
     my $rval = `df -P -l -k $path`;
     my $uperK = ( $rval =~ /512-blocks/i ) ? 2 : 1;    # units per kB
     foreach my $l ( split /\r?\n/, $rval ) {
-        next unless $l =~ /^(.+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(.+)\s+(.+)$/;
+        next unless $l =~ /^(.+?)\s+(\d+)\s+(\d+)\s+(\d+)\s+(.+)\s+(.+)$/;
         my ( $dev, $total, $used, $avail, $useper, $disk ) =
           ( $1, $2, $3, $4, $5, $6 );
 
