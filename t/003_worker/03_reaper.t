@@ -32,18 +32,3 @@ cmp_ok $s3_cnt, '<', $s3_cnt2;
 
 done_testing;
 
-use Jonk::Worker;
-sub run_workers {
-    my $dbh = shift;
-    my @workers = qw/PrettyFS::Worker::Reaper PrettyFS::Worker::Replication/;
-
-    my $fetcher = Jonk::Worker->new($client->dbh, {functions => \@workers});
-    my %workers = map { $_ => $_->new(dbh => $dbh) } @workers;
-    while (my $job = $fetcher->dequeue()) {
-        debugf("run $job");
-        my $worker = $workers{$job->{func}};
-        $worker->run($job->{arg});
-        # PrettyFS::Worker::Reaper->new(dbh => $client->dbh)->run('127.0.0.1:' . $storage1->port);
-    }
-}
-

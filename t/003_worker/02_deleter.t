@@ -40,18 +40,15 @@ my $uuid;
 my $storage2 = create_storage();
 $client->add_storage(host => '127.0.0.1', port => $storage2->port);
 note(ddf $client->list_storage);
-
-my $rpl = PrettyFS::Worker::Replication->new({dbh => $dbh});
-$rpl->run($uuid);
+run_workers($dbh);
 
 my @storage_urls = $client->get_urls($uuid);
-is join(",", sort @storage_urls), join(',', sort "http://127.0.0.1:@{[ $storage->port ]}/$uuid", "http://127.0.0.1:@{[ $storage2->port ]}/$uuid");
+is join(",", sort @storage_urls), join(',', sort "http://127.0.0.1:@{[ $storage->port ]}/$uuid", "http://127.0.0.1:@{[ $storage2->port ]}/$uuid"), 'stored';
 
 $client->delete_file($uuid);
 
 note 'delete';
-my $deleter = PrettyFS::Worker::Deleter->new({dbh => $dbh});
-$deleter->run($uuid);
+run_workers($dbh);
 
 {
     my @urls = $client->get_urls($uuid);

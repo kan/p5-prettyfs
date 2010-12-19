@@ -25,6 +25,8 @@ sub new {
 sub run {
     my ($self, $uuid) = @_;
 
+    infof("running deleter");
+
     my ($ext, $bucket_id) = $self->dbh->selectrow_array('SELECT ext, bucket_id FROM file WHERE uuid=?',{Slice => {}}, $uuid);
 
     my $bucket_name;

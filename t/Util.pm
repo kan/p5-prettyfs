@@ -11,8 +11,9 @@ use Plack::Loader;
 use Fcntl ':seek';
 use PrettyFS::Server::Store;
 use Log::Minimal;
+use Module::Load;
 
-our @EXPORT = qw/get_dbh get_client create_storage make_tmpfile ddf/;
+our @EXPORT = qw/get_dbh get_client create_storage make_tmpfile ddf run_workers/;
 
 sub get_dbh {
     my $dsn = shift || 'dbi:SQLite:';
@@ -43,6 +44,22 @@ sub make_tmpfile {
     print {$tmp} $content;
     seek $tmp, 0, SEEK_SET;
     return $tmp;
+}
+
+use Jonk::Worker;
+sub run_workers {
+    my $dbh = shift;
+    Carp::croak "missing dbh" unless $dbh;
+    my @workers = qw/PrettyFS::Worker::Reaper PrettyFS::Worker::Replication PrettyFS::Worker::Deleter/;
+    Module::Load::load($_) for @workers;
+
+    my $fetcher = Jonk::Worker->new($dbh, {functions => \@workers});
+    my %workers = map { $_ => $_->new(dbh => $dbh) } @workers;
+    while (my $job = $fetcher->dequeue()) {
+        debugf("run $job");
+        my $worker = $workers{$job->{func}};
+        $worker->run($job->{arg});
+    }
 }
 
 1;
