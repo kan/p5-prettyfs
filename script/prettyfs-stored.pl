@@ -8,6 +8,7 @@ use opts;
 use PrettyFS::DiskUsage;
 use Proc::Guard;
 use Log::Minimal;
+use Config;
 
 opts my $port => {default => 1919},
      my $base => {isa => 'Str', required =>1};
@@ -24,10 +25,19 @@ my $disk_usage = Proc::Guard->new(
     }
 );
 
+my %signo;
+do {
+    defined $Config{sig_name} || die "No sigs?";
+    my $i;
+    for my $name (split(' ', $Config{sig_name})) {
+        $signo{$name} = $i;
+        $i++;
+    }
+};
 $SIG{TERM} = $SIG{INT} = sub {
     undef $disk_usage;
 
-    exit 1;
+    exit $signo{$_[0]} + 128;
 };
 infof "access to http://localhost:$port/\n";
 Plack::Loader->load('Twiggy', port => $port)->run($app);
