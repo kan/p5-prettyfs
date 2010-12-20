@@ -1,0 +1,9 @@
+- rebalancer(たぶん単体のscriptかな)
+- pftool という名前の CLI utility
+- opts.pm がつかいにくいからやっぱつかわないようにしたい
+- mysql 用の schema が古くなってる(けどこれはもうちょいおちついてからなおしたほうがいいかも)
+- RPC 用の node とかほしい
+- 空き容量とかみて、put するサーバーをえらぶべき
+- store node の directory traversal 対策
+- fsck っぽいやつ(file table にはいってるやつと storage node にはいってるやつ を HEAD リクエストとかで確認するとかそういうの)
+- mindevcount は、設定で調節できるほうがいいね
