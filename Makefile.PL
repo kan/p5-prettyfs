@@ -15,6 +15,7 @@ requires 'Jonk';
 requires 'Data::UUID';
 requires 'JSON';
 requires 'Proc::Guard';
+requires 'Sub::Throttle';
 
 tests 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t';
 test_requires 'Test::More' => 0.96; # done_testing, subtest
