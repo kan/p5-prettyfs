@@ -9,6 +9,7 @@ use Class::Accessor::Lite (
 use Log::Minimal;
 use Furl::HTTP;
 use PrettyFS::Constants;
+use Storable;
 
 sub new {
     my $class = shift;
@@ -23,11 +24,10 @@ sub new {
 }
 
 sub run {
-    my ($self, $uuid) = @_;
+    my ($self, $args) = @_;
+    my ($uuid, $ext, $bucket_id) = @{Storable::thaw($args)};
 
     infof("running deleter");
-
-    my ($ext, $bucket_id) = $self->dbh->selectrow_array('SELECT ext, bucket_id FROM file WHERE uuid=?',{Slice => {}}, $uuid);
 
     my $bucket_name;
     if (defined $bucket_id) {

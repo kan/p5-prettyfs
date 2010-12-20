@@ -17,6 +17,7 @@ use Try::Tiny;
 use Data::UUID;
 use File::Temp ();
 use JSON;
+use Storable;
 
 sub new {
     my $class = shift;
@@ -117,11 +118,23 @@ sub delete_file {
     my ($self, $uuid) = @_;
     Carp::croak("Missing mandatory parameter: uuid") unless @_ ==2;
 
-    $self->db->do(q{UPDATE file SET del_fg=1 WHERE uuid=?}, $uuid);
-    $self->jonk->enqueue(
-        'PrettyFS::Worker::Deleter',
-        $uuid
-    );
+    # start transaction
+    $self->dbh->begin_work();
+
+    {
+        my ($ext, $bucket_id) = $self->dbh->selectrow_array('SELECT ext, bucket_id FROM file WHERE uuid=?',{Slice => {}}, $uuid);
+
+        # enqueue first.
+        $self->jonk->enqueue(
+            'PrettyFS::Worker::Deleter',
+            Storable::nfreeze([$uuid, $ext, $bucket_id])
+        );
+
+        # delete row in file table.
+        $self->dbh->do(q{DELETE FROM file WHERE uuid=?}, {}, $uuid) == 1 or die "Cannot delete file table: " . $self->dbh->errstr;
+    }
+
+    $self->dbh->commit();
 }
 
 sub get_urls {
@@ -131,7 +144,7 @@ sub get_urls {
     my ($bucket_name, $ext) = $self->dbh->selectrow_array(q{SELECT bucket.name, ext FROM file LEFT JOIN bucket ON (bucket.id=file.bucket_id) WHERE uuid=?}, {}, $uuid) or return;
 
     my @ret;
-    my $sth = $self->dbh->prepare(q{SELECT storage.host, storage.port FROM file INNER JOIN file_on ON (file_on.file_uuid=file.uuid) INNER JOIN storage ON (file_on.storage_id=storage.id) WHERE file.uuid=? AND del_fg!=1}) or Cap::croak($self->dbh->errstr);
+    my $sth = $self->dbh->prepare(q{SELECT storage.host, storage.port FROM file INNER JOIN file_on ON (file_on.file_uuid=file.uuid) INNER JOIN storage ON (file_on.storage_id=storage.id) WHERE file.uuid=?}) or Cap::croak($self->dbh->errstr);
     $sth->execute($uuid) or Cap::croak($self->dbh->errstr);
     while (my ($host, $port) = $sth->fetchrow_array()) {
         my $url  = "http://${host}:${port}";
