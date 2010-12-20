@@ -72,6 +72,7 @@ sub run_once {
         $new_data .= "\n" x $pad_len;
 
         # write the file, all at once (with padding) then remove padding
+        infof("writing $ufile");
         my $rv = open( my $fh, $mode, $ufile );
         unless ($rv) {
             critf("Unable to open '$ufile' for writing: $!");

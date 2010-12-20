@@ -25,6 +25,8 @@ create table storage (
     host     varchar(255) not null,
     port     int          unsigned not null,
     status   tinyint     unsigned not null default 1,
+    disk_total int unsigned default null,
+    disk_used  int unsigned default null,
     primary key (id),
     unique (host, port)
 );

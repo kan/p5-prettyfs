@@ -12,8 +12,9 @@ use Fcntl ':seek';
 use PrettyFS::Server::Store;
 use Log::Minimal;
 use Module::Load;
+use Plack::Middleware::AccessLog;
 
-our @EXPORT = qw/get_dbh get_client create_storage make_tmpfile ddf run_workers/;
+our @EXPORT = qw/get_dbh get_client create_storage make_tmpfile ddf run_workers tempdir/;
 
 sub get_dbh {
     my $dsn = shift || 'dbi:SQLite:';
@@ -29,10 +30,11 @@ sub get_client {
 }
 
 sub create_storage {
+    my $base = shift || tempdir();
     return Test::TCP->new(
         code => sub {
             my $port = shift;
-            my $app = PrettyFS::Server::Store->new(base => tempdir())->to_app;
+            my $app = Plack::Middleware::AccessLog->wrap(PrettyFS::Server::Store->new(base => $base)->to_app);
             Plack::Loader->load('Twiggy', port => $port)->run($app);
         },
     );

@@ -16,6 +16,7 @@ use Smart::Args;
 use Try::Tiny;
 use Data::UUID;
 use File::Temp ();
+use JSON;
 
 sub new {
     my $class = shift;
@@ -165,12 +166,13 @@ sub ping {
          my $port;
 
     try {
-        my ($minor_version, $code, $msg, $headers, $body) = $self->ua->request(
-            method => 'GET',
-            path   => "/?alive",
-            host   => $host,
-            port   => $port,
-        );
+        my ( $minor_version, $code, $msg, $headers, $body ) =
+          $self->ua->request(
+            method     => 'GET',
+            path_query => "/?alive",
+            host       => $host,
+            port       => $port,
+          );
         $code =~ /^(?:200|404)$/ ? 1 : 0
     } catch {
         0
@@ -184,16 +186,34 @@ sub update_storage_status {
          my $current_status,
          ;
 
-    if ($self->ping(host => $host, port => $port)) {
-        # alive
-        if ($current_status == STORAGE_STATUS_DOWN) {
-            $self->edit_storage_status(host => $host, port => $port, status => STORAGE_STATUS_ALIVE);
-        }
-    } else {
+    my $mark_fail = sub {
         if ($current_status == STORAGE_STATUS_ALIVE) {
             $self->edit_storage_status(host => $host, port => $port, status => STORAGE_STATUS_DOWN);
         }
-    }
+    };
+
+    try {
+        my ( $minor_version, $code, $msg, $headers, $body ) =
+          $self->ua->request(
+            method     => 'GET',
+            path_query => "/__prettyfs_disk_usage__",
+            host       => $host,
+            port       => $port,
+          );
+        if ($code == 200) {
+            # alive
+            if ($current_status == STORAGE_STATUS_DOWN) {
+                $self->edit_storage_status(host => $host, port => $port, status => STORAGE_STATUS_ALIVE);
+            }
+            my $data = JSON::decode_json($body);
+            # {"available":83846708,"device":"/dev/disk0s2","disk":"/var/folders/MM/MMSDg4lnHS0+J2Aea10zjU+++TI/-Tmp-/Br3pWinSkc","time":1292771992,"total":118153176,"use":"29%","used":34050468}
+            $self->dbh->do(q{UPDATE storage SET disk_total=?, disk_used=? WHERE host=? AND port=?}, {}, $data->{total}, $data->{used}, $host, $port) or Carp::croak("cannot update storage information: " . $self->dbh->errstr);
+        } else {
+            $mark_fail->();
+        }
+    } catch {
+        $mark_fail->();
+    };
 }
 
 sub add_bucket {

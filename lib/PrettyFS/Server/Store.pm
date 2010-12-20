@@ -29,7 +29,9 @@ sub to_app {
 
         if ($env->{REQUEST_METHOD} =~ /^(PUT|GET|DELETE|HEAD)$/) {
             my $method = "dispatch_" . lc($env->{REQUEST_METHOD});
-            (my $path = $env->{PATH_INFO}) =~ s!/!_!g;
+            my $path = $env->{PATH_INFO};
+            $path =~ s!^/!!;
+            $path =~ s!/!_!g;
             my $fname = File::Spec->catfile($self->base, $path);
             return $self->$method($fname, $env);
         } else {
