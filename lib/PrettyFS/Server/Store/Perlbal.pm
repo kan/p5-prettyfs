@@ -8,6 +8,7 @@ use Class::Accessor::Lite (
     ro => [qw/maxconns listen docroot aio_threads/],
 );
 use List::Util qw/max/;
+use Perlbal;
 
 my $OPTMOD_IO_AIO;
 BEGIN {

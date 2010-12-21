@@ -30,12 +30,12 @@ sub get_client {
 }
 
 sub create_storage {
-    my $base = shift || tempdir();
+    my $docroot = shift || tempdir();
+    require PrettyFS::Server::Store::Perlbal;
     return Test::TCP->new(
         code => sub {
             my $port = shift;
-            my $app = Plack::Middleware::AccessLog->wrap(PrettyFS::Server::Store->new(base => $base)->to_app);
-            Plack::Loader->load('Twiggy', port => $port)->run($app);
+            PrettyFS::Server::Store::Perlbal->new(docroot => $docroot, listen => "127.0.0.1:$port")->run;
         },
     );
 }

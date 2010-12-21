@@ -181,12 +181,12 @@ sub ping {
     try {
         my ( $minor_version, $code, $msg, $headers, $body ) =
           $self->ua->request(
-            method     => 'GET',
-            path_query => "/?alive",
+            method     => 'HEAD',
+            path_query => "/__prettyfs_disk_usage__",
             host       => $host,
             port       => $port,
           );
-        $code =~ /^(?:200|404)$/ ? 1 : 0
+        $code =~ /^(?:200|404)$/ ? 1 : 0 # TODO: only allow 200
     } catch {
         0
     };
