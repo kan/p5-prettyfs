@@ -6,7 +6,6 @@ all_from 'lib/PrettyFS.pm';
 
 requires 'Twiggy';
 requires 'Plack' =>  0.9949;
-requires 'Config::Tiny';
 requires 'Furl' => 0.18;
 requires 'Log::Minimal';
 requires 'Class::Accessor::Lite' => 0.05;
@@ -16,6 +15,12 @@ requires 'Data::UUID';
 requires 'JSON';
 requires 'Proc::Guard';
 requires 'Sub::Throttle';
+do {
+	# perlbal related things
+	requires 'Perlbal';
+	requires 'IO::AIO' => 1.6;
+	requires 'Perlbal::XS::HTTPHeaders';
+};
 
 tests 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t';
 test_requires 'Test::More' => 0.96; # done_testing, subtest
