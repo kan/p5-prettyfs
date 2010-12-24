@@ -7,3 +7,4 @@
 - store node の directory traversal 対策
 - fsck っぽいやつ(file table にはいってるやつと storage node にはいってるやつ を HEAD リクエストとかで確認するとかそういうの)
 - mindevcount は、設定で調節できるほうがいいね
+- Storage::Nginx を実装する

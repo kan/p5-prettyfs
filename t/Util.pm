@@ -9,7 +9,7 @@ use Test::TCP 1.08;
 use File::Temp qw/tempdir tmpnam/;
 use Plack::Loader;
 use Fcntl ':seek';
-use PrettyFS::Server::Store;
+use PrettyFS::Server::Store::Perlbal;
 use Log::Minimal;
 use Module::Load;
 use Plack::Middleware::AccessLog;
