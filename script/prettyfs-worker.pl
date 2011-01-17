@@ -10,6 +10,7 @@ use Log::Minimal;
 use Module::Load ();
 use Pod::Usage;
 use Config;
+use Try::Tiny;
 
 my $interval = 1;
 my $max_job_count = 100;
