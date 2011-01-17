@@ -89,7 +89,7 @@ sub run_child {
                 my $uuid = $job->{arg} or die;
                 infof("working: $uuid");
                 try {
-                    $worker->work($uuid);
+                    $worker->run($uuid);
                     infof("working successfully: $uuid");
                 }
                 catch {
